@@ -7,9 +7,7 @@ use weather_cli::storage::Storage;
 
 fn main() -> Result<()> {
     setup_panic!();
-
     env_logger::init();
-
     let args = Cli::parse();
 
     match args.command {

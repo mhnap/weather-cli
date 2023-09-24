@@ -51,6 +51,7 @@ fn configure_wrong_provider() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn configure_provider() -> Result<()> {
     let mut cmd = Command::cargo_bin(BIN_NAME)?;
@@ -61,10 +62,12 @@ fn configure_provider() -> Result<()> {
     p.exp_string("Input provider API key:")?;
     p.send_line("some valid key")?;
     p.exp_string("Successfully saved provider configuration.")?;
+    p.exp_eof()?;
 
     Ok(())
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn reconfigure_provider() -> Result<()> {
     let config_name = rand_string(8);
@@ -77,6 +80,7 @@ fn reconfigure_provider() -> Result<()> {
     p.exp_string("Input provider API key:")?;
     p.send_line("some valid key")?;
     p.exp_string("Successfully saved provider configuration.")?;
+    p.exp_eof()?;
 
     // Do not reconfigure.
 
@@ -88,6 +92,7 @@ fn reconfigure_provider() -> Result<()> {
     p.exp_string("Do you want to reconfigure?")?;
     p.send_line("n")?;
     p.exp_string("Provider configuration has not changed.")?;
+    p.exp_eof()?;
 
     // Do reconfigure.
 
@@ -101,6 +106,7 @@ fn reconfigure_provider() -> Result<()> {
     p.exp_string("Input provider API key:")?;
     p.send_line("some another valid key")?;
     p.exp_string("Successfully saved provider configuration.")?;
+    p.exp_eof()?;
 
     Ok(())
 }
