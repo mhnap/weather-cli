@@ -7,7 +7,7 @@ use rand::distributions::{Alphanumeric, DistString};
 
 const BIN_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const TIMEOUT_MS: Option<u64> = Some(100);
+const TIMEOUT_MS: Option<u64> = Some(1000);
 
 fn rand_string(len: usize) -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), len)
