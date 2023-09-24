@@ -1,8 +1,26 @@
+use std::env;
+
 use log::debug;
 use serde::{Deserialize, Serialize};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const CONFIG_NAME: &str = "config";
+const DEFAULT_CONFIG_NAME: &str = "config";
+
+// Read config name from env in debug mode, needed for testing.
+#[cfg(debug_assertions)]
+fn config_name() -> String {
+    if let Ok(config_name) = env::var("CONFIG_NAME") {
+        config_name
+    } else {
+        DEFAULT_CONFIG_NAME.into()
+    }
+}
+
+// Do not read config name from env in release mode.
+#[cfg(not(debug_assertions))]
+fn config_name() -> String {
+    DEFAULT_CONFIG_NAME.into()
+}
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 struct Provider {
@@ -22,7 +40,7 @@ pub struct Storage {
 
 impl Storage {
     pub fn load() -> Self {
-        let config = confy::load(APP_NAME, CONFIG_NAME).expect("cannot load config");
+        let config = confy::load(APP_NAME, config_name().as_str()).expect("cannot load config");
         Storage { config }
     }
 
@@ -47,6 +65,6 @@ impl Storage {
             self.config.providers.push(Provider { name, api_key });
         }
 
-        confy::store(APP_NAME, CONFIG_NAME, self.config).expect("cannot store config");
+        confy::store(APP_NAME, config_name().as_str(), self.config).expect("cannot store config");
     }
 }
