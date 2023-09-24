@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum, Args};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 pub mod prelude {
     pub use clap::Parser;
@@ -16,7 +16,7 @@ enum Command {
     /// Configure credentials for the provider.
     Configure {
         #[arg(value_enum)]
-        provider: Provider
+        provider: Provider,
     },
     /// Show weather for the provided address.
     Get,
