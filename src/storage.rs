@@ -90,7 +90,7 @@ mod tests {
         // Configure provider first time.
 
         storage.configure_provider("provider".into(), "api_key".into());
-        let mut storage = Storage::load();
+        let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
         let provider = storage.config.providers.last().unwrap();
@@ -100,7 +100,7 @@ mod tests {
         // Reconfigure provider.
 
         storage.configure_provider("provider".into(), "new_api_key".into());
-        let mut storage = Storage::load();
+        let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
         let provider = storage.config.providers.last().unwrap();
@@ -110,7 +110,7 @@ mod tests {
         // Configure another provider.
 
         storage.configure_provider("another_provider".into(), "another_api_key".into());
-        let mut storage = Storage::load();
+        let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 2);
         assert!(storage.is_provider_configured("another_provider"));
         let provider = storage.config.providers.last().unwrap();
