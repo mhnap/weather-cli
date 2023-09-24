@@ -1,3 +1,5 @@
+use weather_cli::cli::{prelude::*, Cli};
+
 fn main() {
-    println!("Hello, world!");
+    Cli::parse();
 }
