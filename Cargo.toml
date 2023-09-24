@@ -12,8 +12,13 @@ repository = "https://github.com/mhnap/weather-cli"
 clap = { version = "4.3.19", features = ["derive"] }
 human-panic = "1.1.5"
 env_logger = "0.10.0"
+serde = { version = "1.0.176", features = ["derive"] }
+confy = "0.5.1"
+log = "0.4.19"
+derive_more = "0.99.17"
+dialoguer = "0.10.4"
+anyhow = "1.0.72"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
 predicates = "3.0.3"
-anyhow = "1.0.72"

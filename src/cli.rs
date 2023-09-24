@@ -1,19 +1,20 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use derive_more::Display;
 
 pub mod prelude {
     pub use clap::Parser;
 }
 
 /// Simple weather CLI.
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
-    command: Command,
+    pub command: Command,
 }
 
-#[derive(Subcommand)]
-enum Command {
+#[derive(Subcommand, Debug)]
+pub enum Command {
     /// Configure credentials for the provider.
     Configure {
         #[arg(value_enum)]
@@ -23,8 +24,8 @@ enum Command {
     Get,
 }
 
-#[derive(ValueEnum, Clone)]
-enum Provider {
+#[derive(ValueEnum, Clone, Display, Debug)]
+pub enum Provider {
     OpenWeather,
     WeatherApi,
     AccuWeather,
