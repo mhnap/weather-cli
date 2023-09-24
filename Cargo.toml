@@ -3,11 +3,14 @@ name = "weather-cli"
 version = "0.1.0"
 authors = ["Mykhailo Hnap <mike.gnap.r@gmail.com>"]
 edition = "2021"
+homepage = "https://github.com/mhnap/weather-cli"
+repository = "https://github.com/mhnap/weather-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = { version = "4.3.19", features = ["derive"] }
+human-panic = "1.1.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
