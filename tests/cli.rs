@@ -3,15 +3,9 @@ use std::process::Command;
 use anyhow::Result;
 use assert_cmd::prelude::*;
 use predicates::str::contains;
-use rand::distributions::{Alphanumeric, DistString};
 
 const BIN_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const TIMEOUT_MS: Option<u64> = Some(1000);
-
-fn rand_string(len: usize) -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), len)
-}
 
 #[test]
 fn help_flag() -> Result<()> {
@@ -52,59 +46,70 @@ fn configure_wrong_provider() -> Result<()> {
 }
 
 #[cfg(not(target_os = "windows"))]
-#[test]
-fn configure_provider() -> Result<()> {
-    let config_name = rand_string(8);
+mod not_windows_tests {
+    use super::*;
+    use rand::distributions::{Alphanumeric, DistString};
 
-    // Configure provider first time.
+    const TIMEOUT_MS: Option<u64> = Some(1000);
 
-    let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", &config_name);
-    cmd.args(["configure", "open-weather"]);
+    fn rand_string(len: usize) -> String {
+        Alphanumeric.sample_string(&mut rand::thread_rng(), len)
+    }
 
-    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
-    p.exp_string("Input provider API key:")?;
-    p.send_line("some valid key")?;
-    p.exp_string("Successfully saved provider configuration.")?;
-    p.exp_eof()?;
+    #[test]
+    fn configure_provider() -> Result<()> {
+        let config_name = rand_string(8);
 
-    // Try to reconfigure provider.
+        // Configure provider first time.
 
-    let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", &config_name);
-    cmd.args(["configure", "open-weather"]);
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", "open-weather"]);
 
-    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
-    p.exp_string("Do you want to reconfigure?")?;
-    p.send_line("n")?;
-    p.exp_string("Provider configuration has not changed.")?;
-    p.exp_eof()?;
+        let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Input provider API key:")?;
+        p.send_line("some valid key")?;
+        p.exp_string("Successfully saved provider configuration.")?;
+        p.exp_eof()?;
 
-    // Reconfigure provider.
+        // Try to reconfigure provider.
 
-    let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", &config_name);
-    cmd.args(["configure", "open-weather"]);
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", "open-weather"]);
 
-    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
-    p.exp_string("Do you want to reconfigure?")?;
-    p.send_line("y")?;
-    p.exp_string("Input provider API key:")?;
-    p.send_line("some another valid key")?;
-    p.exp_string("Successfully saved provider configuration.")?;
-    p.exp_eof()?;
+        let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Do you want to reconfigure?")?;
+        p.send_line("n")?;
+        p.exp_string("Provider configuration has not changed.")?;
+        p.exp_eof()?;
 
-    // Configure another provider.
+        // Reconfigure provider.
 
-    let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", &config_name);
-    cmd.args(["configure", "weather-api"]);
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", "open-weather"]);
 
-    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
-    p.exp_string("Input provider API key:")?;
-    p.send_line("some valid key")?;
-    p.exp_string("Successfully saved provider configuration.")?;
-    p.exp_eof()?;
+        let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Do you want to reconfigure?")?;
+        p.send_line("y")?;
+        p.exp_string("Input provider API key:")?;
+        p.send_line("some another valid key")?;
+        p.exp_string("Successfully saved provider configuration.")?;
+        p.exp_eof()?;
 
-    Ok(())
+        // Configure another provider.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", "weather-api"]);
+
+        let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Input provider API key:")?;
+        p.send_line("some valid key")?;
+        p.exp_string("Successfully saved provider configuration.")?;
+        p.exp_eof()?;
+
+        Ok(())
+    }
 }
