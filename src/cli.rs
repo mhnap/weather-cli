@@ -6,6 +6,7 @@ pub mod prelude {
 
 /// Simple weather CLI.
 #[derive(Parser)]
+#[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     command: Command,
