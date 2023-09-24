@@ -68,3 +68,53 @@ impl Storage {
         confy::store(APP_NAME, config_name().as_str(), self.config).expect("cannot store config");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rand::distributions::{Alphanumeric, DistString};
+
+    use super::*;
+
+    fn rand_string(len: usize) -> String {
+        Alphanumeric.sample_string(&mut rand::thread_rng(), len)
+    }
+
+    #[test]
+    fn configure_provider() {
+        env::set_var("CONFIG_NAME", rand_string(8));
+        let storage = Storage::load();
+
+        assert!(storage.config.providers.is_empty());
+        assert!(!storage.is_provider_configured("provider"));
+
+        // Configure provider first time.
+
+        storage.configure_provider("provider".into(), "api_key".into());
+        let mut storage = Storage::load();
+        assert_eq!(storage.config.providers.len(), 1);
+        assert!(storage.is_provider_configured("provider"));
+        let provider = storage.config.providers.last().unwrap();
+        assert_eq!(provider.name, "provider");
+        assert_eq!(provider.api_key, "api_key");
+
+        // Reconfigure provider.
+
+        storage.configure_provider("provider".into(), "new_api_key".into());
+        let mut storage = Storage::load();
+        assert_eq!(storage.config.providers.len(), 1);
+        assert!(storage.is_provider_configured("provider"));
+        let provider = storage.config.providers.last().unwrap();
+        assert_eq!(provider.name, "provider");
+        assert_eq!(provider.api_key, "new_api_key");
+
+        // Configure another provider.
+
+        storage.configure_provider("another_provider".into(), "another_api_key".into());
+        let mut storage = Storage::load();
+        assert_eq!(storage.config.providers.len(), 2);
+        assert!(storage.is_provider_configured("another_provider"));
+        let provider = storage.config.providers.last().unwrap();
+        assert_eq!(provider.name, "another_provider");
+        assert_eq!(provider.api_key, "another_api_key");
+    }
+}

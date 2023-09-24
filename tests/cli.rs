@@ -54,23 +54,9 @@ fn configure_wrong_provider() -> Result<()> {
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn configure_provider() -> Result<()> {
-    let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", rand_string(8));
-    cmd.args(["configure", "open-weather"]);
-
-    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
-    p.exp_string("Input provider API key:")?;
-    p.send_line("some valid key")?;
-    p.exp_string("Successfully saved provider configuration.")?;
-    p.exp_eof()?;
-
-    Ok(())
-}
-
-#[cfg(not(target_os = "windows"))]
-#[test]
-fn reconfigure_provider() -> Result<()> {
     let config_name = rand_string(8);
+
+    // Configure provider first time.
 
     let mut cmd = Command::cargo_bin(BIN_NAME)?;
     cmd.env("CONFIG_NAME", &config_name);
@@ -82,7 +68,7 @@ fn reconfigure_provider() -> Result<()> {
     p.exp_string("Successfully saved provider configuration.")?;
     p.exp_eof()?;
 
-    // Do not reconfigure.
+    // Try to reconfigure provider.
 
     let mut cmd = Command::cargo_bin(BIN_NAME)?;
     cmd.env("CONFIG_NAME", &config_name);
@@ -94,10 +80,10 @@ fn reconfigure_provider() -> Result<()> {
     p.exp_string("Provider configuration has not changed.")?;
     p.exp_eof()?;
 
-    // Do reconfigure.
+    // Reconfigure provider.
 
     let mut cmd = Command::cargo_bin(BIN_NAME)?;
-    cmd.env("CONFIG_NAME", config_name);
+    cmd.env("CONFIG_NAME", &config_name);
     cmd.args(["configure", "open-weather"]);
 
     let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
@@ -105,6 +91,18 @@ fn reconfigure_provider() -> Result<()> {
     p.send_line("y")?;
     p.exp_string("Input provider API key:")?;
     p.send_line("some another valid key")?;
+    p.exp_string("Successfully saved provider configuration.")?;
+    p.exp_eof()?;
+
+    // Configure another provider.
+
+    let mut cmd = Command::cargo_bin(BIN_NAME)?;
+    cmd.env("CONFIG_NAME", &config_name);
+    cmd.args(["configure", "weather-api"]);
+
+    let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+    p.exp_string("Input provider API key:")?;
+    p.send_line("some valid key")?;
     p.exp_string("Successfully saved provider configuration.")?;
     p.exp_eof()?;
 
