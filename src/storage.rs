@@ -51,7 +51,14 @@ impl Storage {
             .any(|provider| provider.name == name)
     }
 
-    pub fn configure_provider(mut self, name: String, api_key: String) {
+    pub fn configure_provider<N, K>(mut self, name: N, api_key: K)
+    where
+        N: Into<String>,
+        K: Into<String>,
+    {
+        let name = name.into();
+        let api_key = api_key.into();
+
         if let Some(provider) = self
             .config
             .providers
@@ -89,7 +96,7 @@ mod tests {
 
         // Configure provider first time.
 
-        storage.configure_provider("provider".into(), "api_key".into());
+        storage.configure_provider("provider", "api_key");
         let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
@@ -99,7 +106,7 @@ mod tests {
 
         // Reconfigure provider.
 
-        storage.configure_provider("provider".into(), "new_api_key".into());
+        storage.configure_provider("provider", "new_api_key");
         let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
@@ -109,7 +116,7 @@ mod tests {
 
         // Configure another provider.
 
-        storage.configure_provider("another_provider".into(), "another_api_key".into());
+        storage.configure_provider("another_provider", "another_api_key");
         let storage = Storage::load();
         assert_eq!(storage.config.providers.len(), 2);
         assert!(storage.is_provider_configured("another_provider"));
