@@ -1,4 +1,5 @@
 #![deny(unused_must_use)]
+#![forbid(unsafe_code)]
 
 use anyhow::Result;
 use dialoguer::{Confirm, Password};
