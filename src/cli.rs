@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use derive_more::Display;
 
 pub mod prelude {
     pub use clap::Parser;
@@ -24,7 +23,7 @@ pub enum Command {
     Get,
 }
 
-#[derive(ValueEnum, Clone, Display, Debug)]
+#[derive(ValueEnum, Clone, Debug)]
 pub enum Provider {
     OpenWeather,
     WeatherApi,

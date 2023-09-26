@@ -1,8 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 use assert_cmd::prelude::*;
 use predicates::str::contains;
+use std::process::Command;
 
 const BIN_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");

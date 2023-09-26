@@ -1,7 +1,7 @@
-use std::env;
-
+use crate::error::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};
+use std::env;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const DEFAULT_CONFIG_NAME: &str = "config";
@@ -39,9 +39,10 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn load() -> Self {
-        let config = confy::load(APP_NAME, config_name().as_str()).expect("cannot load config");
-        Storage { config }
+    pub fn load() -> Result<Self> {
+        let config = confy::load(APP_NAME, config_name().as_str())?;
+
+        Ok(Storage { config })
     }
 
     pub fn is_provider_configured(&self, name: &str) -> bool {
@@ -51,7 +52,7 @@ impl Storage {
             .any(|provider| provider.name == name)
     }
 
-    pub fn configure_provider<N, K>(mut self, name: N, api_key: K)
+    pub fn configure_provider<N, K>(mut self, name: N, api_key: K) -> Result<()>
     where
         N: Into<String>,
         K: Into<String>,
@@ -72,32 +73,34 @@ impl Storage {
             self.config.providers.push(Provider { name, api_key });
         }
 
-        confy::store(APP_NAME, config_name().as_str(), self.config).expect("cannot store config");
+        confy::store(APP_NAME, config_name().as_str(), self.config)?;
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rand::distributions::{Alphanumeric, DistString};
-
     use super::*;
+    use crate::error::Result;
+    use rand::distributions::{Alphanumeric, DistString};
 
     fn rand_string(len: usize) -> String {
         Alphanumeric.sample_string(&mut rand::thread_rng(), len)
     }
 
     #[test]
-    fn configure_provider() {
+    fn configure_provider() -> Result<()> {
         env::set_var("CONFIG_NAME", rand_string(8));
-        let storage = Storage::load();
+        let storage = Storage::load()?;
 
         assert!(storage.config.providers.is_empty());
         assert!(!storage.is_provider_configured("provider"));
 
         // Configure provider first time.
 
-        storage.configure_provider("provider", "api_key");
-        let storage = Storage::load();
+        storage.configure_provider("provider", "api_key")?;
+        let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
         let provider = storage.config.providers.last().unwrap();
@@ -106,8 +109,8 @@ mod tests {
 
         // Reconfigure provider.
 
-        storage.configure_provider("provider", "new_api_key");
-        let storage = Storage::load();
+        storage.configure_provider("provider", "new_api_key")?;
+        let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured("provider"));
         let provider = storage.config.providers.last().unwrap();
@@ -116,12 +119,14 @@ mod tests {
 
         // Configure another provider.
 
-        storage.configure_provider("another_provider", "another_api_key");
-        let storage = Storage::load();
+        storage.configure_provider("another_provider", "another_api_key")?;
+        let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 2);
         assert!(storage.is_provider_configured("another_provider"));
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.name, "another_provider");
         assert_eq!(provider.api_key, "another_api_key");
+
+        Ok(())
     }
 }
