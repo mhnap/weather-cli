@@ -15,7 +15,6 @@ env_logger = "0.10.0"
 serde = { version = "1.0.176", features = ["derive"] }
 confy = "0.5.1"
 log = "0.4.19"
-derive_more = "0.99.17"
 dialoguer = "0.10.4"
 anyhow = "1.0.72"
 thiserror = "1.0.44"
