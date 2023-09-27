@@ -111,6 +111,7 @@ mod not_windows_tests {
         cmd.args(["configure", first_provider.0]);
 
         let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Provider is already configured.")?;
         p.exp_string("Do you want to reconfigure?")?;
         p.send_line("n")?;
         p.exp_string("Provider configuration has not changed.")?;
@@ -123,6 +124,7 @@ mod not_windows_tests {
         cmd.args(["configure", first_provider.0]);
 
         let mut p = rexpect::session::spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Provider is already configured.")?;
         p.exp_string("Do you want to reconfigure?")?;
         p.send_line("y")?;
         p.exp_string("Input provider API key:")?;
