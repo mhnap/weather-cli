@@ -34,6 +34,19 @@ fn version_flag() -> Result<()> {
 }
 
 #[test]
+fn configure_help_flag() -> Result<()> {
+    Command::cargo_bin(BIN_NAME)?
+        .args(["configure", "-h"])
+        .assert()
+        .success()
+        .stdout(contains(
+            "possible values: open-weather, weather-api, accu-weather",
+        ));
+
+    Ok(())
+}
+
+#[test]
 fn configure_wrong_provider() -> Result<()> {
     Command::cargo_bin(BIN_NAME)?
         .args(["configure", "unknown"])
