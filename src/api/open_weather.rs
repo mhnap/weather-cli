@@ -1,4 +1,4 @@
-use super::{construct_url, Provider, ProviderImpl};
+use super::{construct_url, Provider};
 use reqwest::{
     blocking::{get, Response},
     Result,
@@ -8,11 +8,7 @@ use std::collections::HashMap;
 pub struct OpenWeather;
 
 impl Provider for OpenWeather {
-    const NAME: &'static str = "OpenWeather";
-}
-
-impl ProviderImpl for OpenWeather {
-    fn test_call(api_key: &str, q: &str) -> Result<()> {
+    fn test_call(&self, api_key: &str, q: &str) -> Result<()> {
         geo_direct(api_key, q)?;
         Ok(())
     }

@@ -1,3 +1,4 @@
+use crate::data::Provider;
 use crate::error::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -22,15 +23,15 @@ fn config_name() -> String {
     DEFAULT_CONFIG_NAME.into()
 }
 
-#[derive(Deserialize, Serialize, Default, Debug)]
-struct Provider {
-    name: String,
+#[derive(Deserialize, Serialize, Debug)]
+struct ProviderData {
+    kind: Provider,
     api_key: String,
 }
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 struct Config {
-    providers: Vec<Provider>,
+    providers: Vec<ProviderData>,
 }
 
 #[derive(Debug)]
@@ -45,32 +46,25 @@ impl Storage {
         Ok(Storage { config })
     }
 
-    pub fn is_provider_configured(&self, name: &str) -> bool {
+    pub fn is_provider_configured(&self, kind: Provider) -> bool {
         self.config
             .providers
             .iter()
-            .any(|provider| provider.name == name)
+            .any(|provider| provider.kind == kind)
     }
 
-    pub fn configure_provider<N, K>(mut self, name: N, api_key: K) -> Result<()>
-    where
-        N: Into<String>,
-        K: Into<String>,
-    {
-        let name = name.into();
-        let api_key = api_key.into();
-
+    pub fn configure_provider(mut self, kind: Provider, api_key: String) -> Result<()> {
         if let Some(provider) = self
             .config
             .providers
             .iter_mut()
-            .find(|provider| provider.name == name)
+            .find(|provider| provider.kind == kind)
         {
-            debug!("reconfigured \"{name}\" provider");
+            debug!("reconfigured \"{kind:?}\" provider");
             provider.api_key = api_key;
         } else {
-            debug!("configured \"{name}\" provider");
-            self.config.providers.push(Provider { name, api_key });
+            debug!("configured \"{kind:?}\" provider");
+            self.config.providers.push(ProviderData { kind, api_key });
         }
 
         confy::store(APP_NAME, config_name().as_str(), self.config)?;
@@ -82,6 +76,7 @@ impl Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data::Provider::{OpenWeather, WeatherApi};
     use crate::error::Result;
     use rand::distributions::{Alphanumeric, DistString};
 
@@ -95,36 +90,36 @@ mod tests {
         let storage = Storage::load()?;
 
         assert!(storage.config.providers.is_empty());
-        assert!(!storage.is_provider_configured("provider"));
+        assert!(!storage.is_provider_configured(OpenWeather));
 
         // Configure provider first time.
 
-        storage.configure_provider("provider", "api_key")?;
+        storage.configure_provider(OpenWeather, "api_key".into())?;
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
-        assert!(storage.is_provider_configured("provider"));
+        assert!(storage.is_provider_configured(OpenWeather));
         let provider = storage.config.providers.last().unwrap();
-        assert_eq!(provider.name, "provider");
+        assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "api_key");
 
         // Reconfigure provider.
 
-        storage.configure_provider("provider", "new_api_key")?;
+        storage.configure_provider(OpenWeather, "new_api_key".into())?;
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
-        assert!(storage.is_provider_configured("provider"));
+        assert!(storage.is_provider_configured(OpenWeather));
         let provider = storage.config.providers.last().unwrap();
-        assert_eq!(provider.name, "provider");
+        assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "new_api_key");
 
         // Configure another provider.
 
-        storage.configure_provider("another_provider", "another_api_key")?;
+        storage.configure_provider(WeatherApi, "another_api_key".into())?;
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 2);
-        assert!(storage.is_provider_configured("another_provider"));
+        assert!(storage.is_provider_configured(WeatherApi));
         let provider = storage.config.providers.last().unwrap();
-        assert_eq!(provider.name, "another_provider");
+        assert_eq!(provider.kind, WeatherApi);
         assert_eq!(provider.api_key, "another_api_key");
 
         Ok(())

@@ -3,8 +3,9 @@
 
 use anyhow::Result;
 use dialoguer::{Confirm, Password};
-use weather_cli::api::{AccuWeather, OpenWeather, Provider as ApiProvider, WeatherApi};
-use weather_cli::cli::{prelude::*, Cli, Command, Provider};
+use weather_cli::api;
+use weather_cli::cli::{prelude::*, Cli, Command};
+use weather_cli::data::Provider;
 use weather_cli::storage::Storage;
 
 fn main() -> Result<()> {
@@ -14,12 +15,7 @@ fn main() -> Result<()> {
 
     match args.command {
         Command::Configure { provider } => {
-            // TODO: Think something better?
-            match provider {
-                Provider::OpenWeather => configure_provider::<OpenWeather>(),
-                Provider::WeatherApi => configure_provider::<WeatherApi>(),
-                Provider::AccuWeather => configure_provider::<AccuWeather>(),
-            }?;
+            configure_provider(provider)?;
         }
         Command::Get => {
             todo!();
@@ -29,11 +25,11 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn configure_provider<P: ApiProvider>() -> Result<()> {
-    let name = P::NAME;
+fn configure_provider(provider: Provider) -> Result<()> {
+    let api_provider: Box<dyn api::Provider> = provider.into();
     let storage = Storage::load()?;
 
-    if storage.is_provider_configured(name) {
+    if storage.is_provider_configured(provider) {
         println!("Provider is already configured.");
         let confirmation = Confirm::new()
             .with_prompt("Do you want to reconfigure?")
@@ -48,13 +44,13 @@ fn configure_provider<P: ApiProvider>() -> Result<()> {
         .with_prompt("Input provider API key")
         .interact()?;
 
-    let is_correct_api_key = P::validate_api_key(&api_key)?;
+    let is_correct_api_key = api_provider.validate_api_key(&api_key)?;
     if !is_correct_api_key {
-        println!("Incorrect provider API key.");
+        eprintln!("Incorrect provider API key.");
         return Ok(());
     }
 
-    storage.configure_provider(name, api_key)?;
+    storage.configure_provider(provider, api_key)?;
     println!("Successfully saved provider configuration.");
 
     Ok(())
