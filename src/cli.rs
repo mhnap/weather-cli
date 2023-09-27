@@ -21,6 +21,10 @@ pub enum Command {
         #[arg(value_enum)]
         provider: Provider,
     },
-    /// Show weather for the provided address.
-    Get,
+    /// Show weather by address.
+    Get {
+        /// Choose an active provider and save the choice.
+        #[arg(short, long)]
+        provider: Option<Provider>,
+    },
 }

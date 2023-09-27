@@ -31,6 +31,7 @@ struct ProviderData {
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 struct Config {
+    active_provider: Option<Provider>,
     providers: Vec<ProviderData>,
 }
 
@@ -47,29 +48,47 @@ impl Storage {
     }
 
     pub fn is_provider_configured(&self, kind: Provider) -> bool {
-        self.config
-            .providers
-            .iter()
-            .any(|provider| provider.kind == kind)
+        self.config.providers.iter().any(|p| p.kind == kind)
     }
 
     pub fn configure_provider(mut self, kind: Provider, api_key: String) -> Result<()> {
-        if let Some(provider) = self
-            .config
-            .providers
-            .iter_mut()
-            .find(|provider| provider.kind == kind)
-        {
-            debug!("reconfigured \"{kind:?}\" provider");
+        if let Some(provider) = self.config.providers.iter_mut().find(|p| p.kind == kind) {
             provider.api_key = api_key;
+            debug!("reconfigured \"{kind:?}\" provider");
         } else {
-            debug!("configured \"{kind:?}\" provider");
             self.config.providers.push(ProviderData { kind, api_key });
+            debug!("configured \"{kind:?}\" provider");
         }
 
+        self.mark_provider_active_without_store(kind);
         confy::store(APP_NAME, config_name().as_str(), self.config)?;
 
         Ok(())
+    }
+
+    pub fn mark_provider_active(mut self, kind: Provider) -> Result<()> {
+        if self.mark_provider_active_without_store(kind) {
+            confy::store(APP_NAME, config_name().as_str(), self.config)?;
+        }
+
+        Ok(())
+    }
+
+    // Use this function to store config only one time during configuring provider.
+    // Another option is to copy-paste condition, assignment and debug log.
+    fn mark_provider_active_without_store(&mut self, kind: Provider) -> bool {
+        // Check whether provider is already active.
+        if self.config.active_provider == Some(kind) {
+            false
+        } else {
+            self.config.active_provider = Some(kind);
+            debug!("marked \"{kind:?}\" provider active");
+            true
+        }
+    }
+
+    pub fn get_active_provider(&self) -> Option<Provider> {
+        self.config.active_provider
     }
 }
 
@@ -84,11 +103,13 @@ mod tests {
         Alphanumeric.sample_string(&mut rand::thread_rng(), len)
     }
 
+    // Currently, can run only one test, as it sets env var and other tests cannot be run in parallel.
     #[test]
     fn configure_provider() -> Result<()> {
         env::set_var("CONFIG_NAME", rand_string(8));
         let storage = Storage::load()?;
 
+        assert!(storage.config.active_provider.is_none());
         assert!(storage.config.providers.is_empty());
         assert!(!storage.is_provider_configured(OpenWeather));
 
@@ -98,6 +119,8 @@ mod tests {
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured(OpenWeather));
+        assert_eq!(storage.config.active_provider, Some(OpenWeather));
+        assert_eq!(storage.get_active_provider(), Some(OpenWeather));
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "api_key");
@@ -108,6 +131,8 @@ mod tests {
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured(OpenWeather));
+        assert_eq!(storage.config.active_provider, Some(OpenWeather));
+        assert_eq!(storage.get_active_provider(), Some(OpenWeather));
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "new_api_key");
@@ -118,9 +143,18 @@ mod tests {
         let storage = Storage::load()?;
         assert_eq!(storage.config.providers.len(), 2);
         assert!(storage.is_provider_configured(WeatherApi));
+        assert_eq!(storage.config.active_provider, Some(WeatherApi));
+        assert_eq!(storage.get_active_provider(), Some(WeatherApi));
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, WeatherApi);
         assert_eq!(provider.api_key, "another_api_key");
+
+        // Mark provider as active.
+
+        storage.mark_provider_active(OpenWeather)?;
+        let storage = Storage::load()?;
+        assert_eq!(storage.get_active_provider(), Some(OpenWeather));
+        assert_eq!(storage.config.active_provider, Some(OpenWeather));
 
         Ok(())
     }
