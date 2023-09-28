@@ -1,4 +1,4 @@
-name: C
+name: CI
 
 on:
   push:
@@ -26,4 +26,4 @@ jobs:
       env:
         OPEN_WEATHER_KEY: d478a8588dc9a6983cc64f20bffab6c0
         WEATHER_API_KEY: d95a969392f349afb9990200232409
-        ACCU_WEATHER_KEY: nqXnESgkAGGejk3XbDD2VqWJryK2GuOX
+        ACCU_WEATHER_KEY: L2M3psNOPPcMrDvXHCCse1111aStasrI
