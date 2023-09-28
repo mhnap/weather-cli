@@ -106,9 +106,9 @@ fn get_weather(provider: Provider, location: &str) -> Result<Weather> {
             &locations[selection]
         }
     };
-    let wether = api_provider.get_weather(api_key, location)?;
+    let weather = api_provider.get_weather(api_key, location)?;
 
-    Ok(wether)
+    Ok(weather)
 }
 
 fn show_weather(weather: Weather) {
