@@ -1,26 +1,101 @@
 use super::{construct_url, Provider};
-use reqwest::{
-    blocking::{get, Response},
-    Result,
-};
+use crate::data;
+use crate::error::Result;
+use reqwest::blocking::{get, Response};
+use serde::Deserialize;
 use std::collections::HashMap;
+use uom::si::f64::ThermodynamicTemperature;
+use uom::si::thermodynamic_temperature::degree_celsius;
 
 pub struct WeatherApi;
 
 impl Provider for WeatherApi {
-    fn test_call(&self, api_key: &str, q: &str) -> Result<()> {
-        current(api_key, q)?;
+    fn test_call(&self, api_key: &str, q: &str) -> reqwest::Result<()> {
+        search(api_key, q)?;
         Ok(())
+    }
+
+    fn search_location(&self, api_key: &str, location: &str) -> Result<Vec<data::Location>> {
+        let response = search(api_key, location)?;
+        let locations: Vec<Location> = response.json()?;
+        Ok(locations.into_iter().map(Into::into).collect())
+    }
+
+    fn get_weather(&self, api_key: &str, location: &data::Location) -> Result<data::Weather> {
+        let response = current(
+            api_key,
+            location.lat.expect("missing lat"),
+            location.lon.expect("missing lon"),
+        )?;
+        let weather: Weather = response.json()?;
+        Ok(weather.into())
     }
 }
 
 const HOST: &str = "https://api.weatherapi.com";
 
-fn current(api_key: &str, q: &str) -> Result<Response> {
+#[derive(Deserialize, Debug)]
+struct Location {
+    name: String,
+    region: String,
+    country: String,
+    lat: f64,
+    lon: f64,
+}
+
+impl From<Location> for data::Location {
+    fn from(value: Location) -> Self {
+        Self {
+            id: None,
+            name: value.name,
+            state: Some(value.region),
+            country: value.country,
+            lat: Some(value.lat),
+            lon: Some(value.lon),
+        }
+    }
+}
+
+fn search(api_key: &str, q: &str) -> reqwest::Result<Response> {
+    let url = construct_url(
+        HOST,
+        vec!["v1", "search.json"],
+        HashMap::from([("key", api_key), ("q", q)]),
+    );
+
+    get(url)?.error_for_status()
+}
+
+#[derive(Deserialize, Debug)]
+struct Weather {
+    current: Current,
+}
+
+#[derive(Deserialize, Debug)]
+struct Current {
+    temp_c: f64,
+    condition: Condition,
+}
+
+#[derive(Deserialize, Debug)]
+struct Condition {
+    text: String,
+}
+
+impl From<Weather> for data::Weather {
+    fn from(value: Weather) -> Self {
+        Self {
+            temperature: ThermodynamicTemperature::new::<degree_celsius>(value.current.temp_c),
+            description: value.current.condition.text,
+        }
+    }
+}
+
+fn current(api_key: &str, lat: f64, lon: f64) -> reqwest::Result<Response> {
     let url = construct_url(
         HOST,
         vec!["v1", "current.json"],
-        HashMap::from([("key", api_key), ("q", q)]),
+        HashMap::from([("key", api_key), ("q", &format!("{},{}", lat, lon))]),
     );
 
     get(url)?.error_for_status()

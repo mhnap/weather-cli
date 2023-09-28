@@ -90,6 +90,14 @@ impl Storage {
     pub fn get_active_provider(&self) -> Option<Provider> {
         self.config.active_provider
     }
+
+    pub fn get_api_key(&self, kind: Provider) -> Option<&str> {
+        self.config
+            .providers
+            .iter()
+            .find(|p| p.kind == kind)
+            .map(|p| p.api_key.as_str())
+    }
 }
 
 #[cfg(test)]
@@ -112,6 +120,7 @@ mod tests {
         assert!(storage.config.active_provider.is_none());
         assert!(storage.config.providers.is_empty());
         assert!(!storage.is_provider_configured(OpenWeather));
+        assert!(storage.get_api_key(OpenWeather).is_none());
 
         // Configure provider first time.
 
@@ -124,6 +133,7 @@ mod tests {
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "api_key");
+        assert_eq!(storage.get_api_key(OpenWeather), Some("api_key"));
 
         // Reconfigure provider.
 
@@ -136,6 +146,7 @@ mod tests {
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "new_api_key");
+        assert_eq!(storage.get_api_key(OpenWeather), Some("new_api_key"));
 
         // Configure another provider.
 
@@ -148,6 +159,7 @@ mod tests {
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, WeatherApi);
         assert_eq!(provider.api_key, "another_api_key");
+        assert_eq!(storage.get_api_key(WeatherApi), Some("another_api_key"));
 
         // Mark provider as active.
 

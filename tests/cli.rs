@@ -68,7 +68,8 @@ fn get_command_help_flag() -> Result<()> {
         .args(["get", "-h"])
         .assert()
         .success()
-        .stdout(contains("-p, --provider <PROVIDER>"));
+        .stdout(contains("-p, --provider <PROVIDER>"))
+        .stdout(contains("-l, --location <LOCATION>"));
 
     Ok(())
 }
@@ -92,14 +93,14 @@ fn get_command_without_configured_provider() -> Result<()> {
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
-        .arg("get")
+        .args(["get", "-lKyiv"])
         .assert()
         .failure()
         .stderr(contains("There is none configured provider."));
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
-        .args(["get", "-popen-weather"])
+        .args(["get", "-popen-weather", "-lKyiv"])
         .assert()
         .failure()
         .stderr(contains("Provider is not configured."));
@@ -120,7 +121,7 @@ mod not_windows_tests {
     use std::collections::HashMap;
     use std::env;
 
-    const TIMEOUT_MS: Option<u64> = Some(1000);
+    const TIMEOUT_MS: Option<u64> = Some(10000);
 
     fn providers_with_keys() -> Result<HashMap<&'static str, String>> {
         Ok([
@@ -132,7 +133,7 @@ mod not_windows_tests {
     }
 
     #[test]
-    fn configure_provider() -> Result<()> {
+    fn reconfigure_provider() -> Result<()> {
         let config_name = rand_string(8);
         let providers_with_keys = providers_with_keys()?;
         let first_provider = providers_with_keys.iter().next().unwrap();
@@ -194,7 +195,7 @@ mod not_windows_tests {
     }
 
     #[test]
-    fn configure_provider_correctly() -> Result<()> {
+    fn configure_provider_correctly_and_get_weather() -> Result<()> {
         let config_name = rand_string(8);
 
         for (provider, key) in providers_with_keys()? {
@@ -206,6 +207,38 @@ mod not_windows_tests {
             p.exp_string("Input provider API key:")?;
             p.send_line(&key)?;
             p.exp_string("Successfully saved provider configuration.")?;
+            p.exp_eof()?;
+
+            // Try to get weather for nonexistent location.
+
+            let mut cmd = Command::cargo_bin(BIN_NAME)?;
+            cmd.env("CONFIG_NAME", &config_name);
+            cmd.args(["get", "-lnonexistent"]);
+
+            let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+            p.exp_string("Sorry, cannot find any location for the given input.")?;
+            p.exp_eof()?;
+
+            // Get weather for one location.
+
+            let mut cmd = Command::cargo_bin(BIN_NAME)?;
+            cmd.env("CONFIG_NAME", &config_name);
+            cmd.args(["get", "-lTernopil"]);
+
+            let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+            p.exp_string("°C")?;
+            p.exp_eof()?;
+
+            // Choose a location and get the weather for it.
+
+            let mut cmd = Command::cargo_bin(BIN_NAME)?;
+            cmd.env("CONFIG_NAME", &config_name);
+            cmd.args(["get", "-lLondon"]);
+
+            let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+            p.exp_string("Several locations have been found, select one of them:")?;
+            p.send_line(" ")?;
+            p.exp_string("°C")?;
             p.exp_eof()?;
         }
 
@@ -227,41 +260,6 @@ mod not_windows_tests {
             p.exp_string("Incorrect provider API key.")?;
             p.exp_eof()?;
         }
-
-        Ok(())
-    }
-
-    #[test]
-    fn last_configured_provider_stays_active() -> Result<()> {
-        let config_name = rand_string(8);
-        let providers_with_keys = providers_with_keys()?;
-        let first_provider = providers_with_keys.iter().next().unwrap();
-
-        // Configure.
-
-        let mut cmd = Command::cargo_bin(BIN_NAME)?;
-        cmd.env("CONFIG_NAME", &config_name);
-        cmd.args(["configure", first_provider.0]);
-
-        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Input provider API key:")?;
-        p.send_line(first_provider.1)?;
-        p.exp_string("Successfully saved provider configuration.")?;
-        p.exp_eof()?;
-
-        // Get.
-
-        Command::cargo_bin(BIN_NAME)?
-            .env("CONFIG_NAME", &config_name)
-            .arg("get")
-            .assert()
-            .success();
-
-        Command::cargo_bin(BIN_NAME)?
-            .env("CONFIG_NAME", &config_name)
-            .args(["get", &format!("-p{}", first_provider.0)])
-            .assert()
-            .success();
 
         Ok(())
     }

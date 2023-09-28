@@ -18,9 +18,10 @@ log = "0.4.19"
 dialoguer = "0.10.4"
 anyhow = "1.0.72"
 thiserror = "1.0.44"
-reqwest = { version = "0.11.18", features = ["blocking"] }
+reqwest = { version = "0.11.18", features = ["blocking", "json"] }
 url = "2.4.0"
 proc-exit = "2.0.1"
+uom = "0.35.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

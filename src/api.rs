@@ -1,3 +1,4 @@
+use crate::data::{Location, Weather};
 use crate::error::Result;
 use std::collections::HashMap;
 use url::Url;
@@ -26,6 +27,10 @@ pub trait Provider {
     }
 
     fn test_call(&self, api_key: &str, q: &str) -> reqwest::Result<()>;
+
+    fn search_location(&self, api_key: &str, q: &str) -> Result<Vec<Location>>;
+
+    fn get_weather(&self, api_key: &str, location: &Location) -> Result<Weather>;
 }
 
 fn construct_url(host: &str, path_segments: Vec<&str>, query_pairs: HashMap<&str, &str>) -> Url {

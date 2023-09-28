@@ -2,11 +2,14 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use dialoguer::{Confirm, Password};
+use dialoguer::{Confirm, Password, Select};
 use proc_exit::Code;
+use uom::si::thermodynamic_temperature::degree_celsius;
+use uom::si::Unit;
+
 use weather_cli::api;
 use weather_cli::cli::{prelude::*, Cli, Command};
-use weather_cli::data::Provider;
+use weather_cli::data::{Provider, Weather};
 use weather_cli::storage::Storage;
 
 fn main() -> Result<()> {
@@ -18,9 +21,10 @@ fn main() -> Result<()> {
         Command::Configure { provider } => {
             configure_provider(provider)?;
         }
-        Command::Get { provider } => {
+        Command::Get { provider, location } => {
             let provider = choose_active_provider(provider)?;
-            dbg!(provider);
+            let weather = get_weather(provider, &location)?;
+            show_weather(weather);
         }
     }
 
@@ -61,11 +65,11 @@ fn choose_active_provider(provider: Option<Provider>) -> Result<Provider> {
     let storage = Storage::load()?;
     match provider {
         None => {
-            let Some(active_provider) = storage.get_active_provider() else {
+            let Some(provider) = storage.get_active_provider() else {
                 eprintln!("There is none configured provider.");
                 Code::FAILURE.process_exit()
             };
-            Ok(active_provider)
+            Ok(provider)
         }
         Some(provider) => {
             if storage.is_provider_configured(provider) {
@@ -77,4 +81,41 @@ fn choose_active_provider(provider: Option<Provider>) -> Result<Provider> {
             }
         }
     }
+}
+
+fn get_weather(provider: Provider, location: &str) -> Result<Weather> {
+    let storage = Storage::load()?;
+    let api_key = storage
+        .get_api_key(provider)
+        .expect("There should always be an active provider here");
+
+    let api_provider: Box<dyn api::Provider> = provider.into();
+    let locations = api_provider.search_location(api_key, location)?;
+    let location = match locations.len() {
+        0 => {
+            eprintln!("Sorry, cannot find any location for the given input.");
+            Code::FAILURE.process_exit()
+        }
+        1 => &locations[0],
+        _ => {
+            let selection = Select::new()
+                .default(0)
+                .items(&locations)
+                .with_prompt("Several locations have been found, select one of them")
+                .interact()?;
+            &locations[selection]
+        }
+    };
+    let wether = api_provider.get_weather(api_key, location)?;
+
+    Ok(wether)
+}
+
+fn show_weather(weather: Weather) {
+    println!(
+        "{}, {:.0}{}",
+        weather.description,
+        weather.temperature.get::<degree_celsius>(),
+        degree_celsius::abbreviation()
+    );
 }
