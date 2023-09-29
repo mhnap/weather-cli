@@ -1,8 +1,9 @@
+use std::process::Command;
+
 use anyhow::Result;
 use assert_cmd::prelude::*;
 use predicates::str::contains;
 use rand::distributions::{Alphanumeric, DistString};
-use std::process::Command;
 
 const BIN_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -116,10 +117,12 @@ mod not_windows_tests {
     // Another approach would be to mock providers' APIs with fake ones in tests.
     // But for now, leave it as it is to save time.
 
-    use super::*;
-    use rexpect::session::spawn_command;
     use std::collections::HashMap;
     use std::env;
+
+    use rexpect::session::spawn_command;
+
+    use super::*;
 
     const TIMEOUT_MS: Option<u64> = Some(10000);
 

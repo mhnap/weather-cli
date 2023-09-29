@@ -1,8 +1,10 @@
-use crate::data::Provider;
-use crate::error::Result;
+use std::env;
+
 use log::debug;
 use serde::{Deserialize, Serialize};
-use std::env;
+
+use crate::data::Provider;
+use crate::error::Result;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const DEFAULT_CONFIG_NAME: &str = "config";
@@ -102,10 +104,12 @@ impl Storage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use rand::distributions::{Alphanumeric, DistString};
+
     use crate::data::Provider::{OpenWeather, WeatherApi};
     use crate::error::Result;
-    use rand::distributions::{Alphanumeric, DistString};
+
+    use super::*;
 
     fn rand_string(len: usize) -> String {
         Alphanumeric.sample_string(&mut rand::thread_rng(), len)

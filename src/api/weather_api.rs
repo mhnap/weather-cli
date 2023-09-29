@@ -1,11 +1,14 @@
-use super::{construct_url, Provider};
-use crate::data;
-use crate::error::Result;
+use std::collections::HashMap;
+
 use reqwest::blocking::{get, Response};
 use serde::Deserialize;
-use std::collections::HashMap;
 use uom::si::f64::ThermodynamicTemperature;
 use uom::si::thermodynamic_temperature::degree_celsius;
+
+use crate::data;
+use crate::error::Result;
+
+use super::{construct_url, Provider};
 
 pub struct WeatherApi;
 

@@ -1,21 +1,21 @@
-use crate::data::{Location, Weather};
-use crate::error::Result;
 use std::collections::HashMap;
-use url::Url;
 
-mod accu_weather;
-mod open_weather;
-mod weather_api;
+use url::Url;
 
 pub use accu_weather::AccuWeather;
 pub use open_weather::OpenWeather;
 pub use weather_api::WeatherApi;
 
-const DEFAULT_CITY: &str = "Kyiv";
+use crate::data::{Location, Weather};
+use crate::error::Result;
+
+mod accu_weather;
+mod open_weather;
+mod weather_api;
 
 pub trait Provider {
     fn validate_api_key(&self, api_key: &str) -> Result<bool> {
-        let result = self.test_call(api_key, DEFAULT_CITY);
+        let result = self.test_call(api_key, "Kyiv");
         if let Some(status_code) = result.as_ref().err().and_then(|e| e.status()) {
             if status_code == 401 || status_code == 403 {
                 return Ok(false);

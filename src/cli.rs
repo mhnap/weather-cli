@@ -1,5 +1,6 @@
-use crate::data::Provider;
 use clap::{Parser, Subcommand};
+
+use crate::data::Provider;
 
 pub mod prelude {
     pub use clap::Parser;

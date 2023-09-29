@@ -1,8 +1,10 @@
-use crate::api;
+use std::fmt::{Display, Formatter};
+
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use uom::si::f64::ThermodynamicTemperature;
+
+use crate::api;
 
 #[derive(Deserialize, Serialize, ValueEnum, Copy, Clone, Debug, PartialEq)]
 pub enum Provider {
