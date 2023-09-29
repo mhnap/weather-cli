@@ -70,7 +70,7 @@ fn get_command_help_flag() -> Result<()> {
         .assert()
         .success()
         .stdout(contains("-p, --provider <PROVIDER>"))
-        .stdout(contains("-l, --location <LOCATION>"));
+        .stdout(contains("<LOCATION>"));
 
     Ok(())
 }
@@ -94,14 +94,14 @@ fn get_command_without_configured_provider() -> Result<()> {
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
-        .args(["get", "-lKyiv"])
+        .args(["get", "Kyiv"])
         .assert()
         .failure()
         .stderr(contains("There is none configured provider."));
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
-        .args(["get", "-popen-weather", "-lKyiv"])
+        .args(["get", "Kyiv", "-popen-weather"])
         .assert()
         .failure()
         .stderr(contains("Provider is not configured."));
@@ -216,7 +216,7 @@ mod not_windows_tests {
 
             let mut cmd = Command::cargo_bin(BIN_NAME)?;
             cmd.env("CONFIG_NAME", &config_name);
-            cmd.args(["get", "-lnonexistent"]);
+            cmd.args(["get", "nonexistent"]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
             p.exp_string("Sorry, cannot find any location for the given input.")?;
@@ -226,7 +226,7 @@ mod not_windows_tests {
 
             let mut cmd = Command::cargo_bin(BIN_NAME)?;
             cmd.env("CONFIG_NAME", &config_name);
-            cmd.args(["get", "-lTernopil"]);
+            cmd.args(["get", "Ternopil"]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
             p.exp_string("°C")?;
@@ -236,7 +236,7 @@ mod not_windows_tests {
 
             let mut cmd = Command::cargo_bin(BIN_NAME)?;
             cmd.env("CONFIG_NAME", &config_name);
-            cmd.args(["get", "-lLondon"]);
+            cmd.args(["get", "London"]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
             p.exp_string("Several locations have been found, select one of them:")?;

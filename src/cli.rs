@@ -29,7 +29,6 @@ pub enum Command {
         provider: Option<Provider>,
 
         /// Choose a location (city, town, or village).
-        #[arg(short, long)]
         location: String,
     },
 }
