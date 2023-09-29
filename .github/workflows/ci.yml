@@ -24,6 +24,6 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
       env:
-        OPEN_WEATHER_KEY: d478a8588dc9a6983cc64f20bffab6c0
-        WEATHER_API_KEY: d95a969392f349afb9990200232409
-        ACCU_WEATHER_KEY: vJGmmPdpoFRx5Yxc2AjFvcXmL6r1Wzrh
+        OPEN_WEATHER_KEY: ${{ secrets.OPEN_WEATHER_KEY }}
+        WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        ACCU_WEATHER_KEY: ${{ secrets.ACCU_WEATHER_KEY }}
