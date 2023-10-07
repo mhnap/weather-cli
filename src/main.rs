@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
+#![deny(clippy::unwrap_used)]
 
 use anyhow::Result;
 use dialoguer::{Confirm, Password, Select};
@@ -87,7 +88,7 @@ fn get_weather(provider: Provider, location: &str) -> Result<Weather> {
     let storage = Storage::load()?;
     let api_key = storage
         .get_api_key(provider)
-        .expect("There should always be an active provider here");
+        .expect("active provider should be configured");
 
     let api_provider: Box<dyn api::Provider> = provider.into();
     let locations = api_provider.search_location(api_key, location)?;

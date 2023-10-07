@@ -27,8 +27,8 @@ impl Provider for WeatherApi {
     fn get_weather(&self, api_key: &str, location: &data::Location) -> Result<data::Weather> {
         let response = current(
             api_key,
-            location.lat.expect("missing lat"),
-            location.lon.expect("missing lon"),
+            location.lat.expect("lat should be set"),
+            location.lon.expect("lon should be set"),
         )?;
         let weather: Weather = response.json()?;
         Ok(weather.into())

@@ -34,11 +34,11 @@ pub trait Provider {
 }
 
 fn construct_url(host: &str, path_segments: Vec<&str>, query_pairs: HashMap<&str, &str>) -> Url {
-    let mut url = Url::parse(host).expect("Cannot parse host");
+    let mut url = Url::parse(host).expect("static urls should be valid");
 
     for path_segment in path_segments {
         url.path_segments_mut()
-            .expect("Cannot mutate path segments")
+            .expect("static urls should be valid")
             .push(path_segment);
     }
 

@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
+#![deny(clippy::unwrap_used)]
 
 pub mod api;
 pub mod cli;

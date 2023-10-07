@@ -25,7 +25,8 @@ impl Provider for AccuWeather {
     }
 
     fn get_weather(&self, api_key: &str, location: &data::Location) -> Result<data::Weather> {
-        let response = current_conditions(api_key, location.id.as_ref().expect("missing id"))?;
+        let response =
+            current_conditions(api_key, location.id.as_ref().expect("id should be set"))?;
         let mut weathers: Vec<Weather> = response.json()?;
         if let Some(weather) = weathers.pop() {
             Ok(weather.into())
