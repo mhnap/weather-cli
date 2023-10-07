@@ -98,7 +98,7 @@ fn current(api_key: &str, lat: f64, lon: f64) -> reqwest::Result<Response> {
     let url = construct_url(
         HOST,
         vec!["v1", "current.json"],
-        HashMap::from([("key", api_key), ("q", &format!("{},{}", lat, lon))]),
+        HashMap::from([("key", api_key), ("q", &format!("{lat},{lon}"))]),
     );
 
     get(url)?.error_for_status()

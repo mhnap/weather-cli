@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         Command::Get { provider, location } => {
             let provider = choose_active_provider(provider)?;
             let weather = get_weather(provider, &location)?;
-            show_weather(weather);
+            show_weather(&weather);
         }
     }
 
@@ -112,7 +112,7 @@ fn get_weather(provider: Provider, location: &str) -> Result<Weather> {
     Ok(weather)
 }
 
-fn show_weather(weather: Weather) {
+fn show_weather(weather: &Weather) {
     println!(
         "{}, {:.0}{}",
         weather.description,
