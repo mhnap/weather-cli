@@ -64,6 +64,19 @@ fn configure_command_wrong_provider() -> Result<()> {
 }
 
 #[test]
+fn configure_command_no_provider() -> Result<()> {
+    Command::cargo_bin(BIN_NAME)?
+        .args(["configure"])
+        .assert()
+        .failure()
+        .stderr(contains(
+            "the following required arguments were not provided:\n  <PROVIDER>",
+        ));
+
+    Ok(())
+}
+
+#[test]
 fn get_command_help_flag() -> Result<()> {
     Command::cargo_bin(BIN_NAME)?
         .args(["get", "-h"])
@@ -83,6 +96,19 @@ fn get_command_wrong_provider() -> Result<()> {
         .failure()
         .stderr(contains(
             "invalid value 'unknown' for '--provider <PROVIDER>'",
+        ));
+
+    Ok(())
+}
+
+#[test]
+fn get_command_no_location() -> Result<()> {
+    Command::cargo_bin(BIN_NAME)?
+        .args(["get"])
+        .assert()
+        .failure()
+        .stderr(contains(
+            "the following required arguments were not provided:\n  <LOCATION>",
         ));
 
     Ok(())
