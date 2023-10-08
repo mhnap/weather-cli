@@ -8,10 +8,15 @@ use proc_exit::Code;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::si::Unit;
 
-use weather_cli::api;
-use weather_cli::cli::{prelude::*, Cli, Command};
-use weather_cli::data::{Provider, Weather};
-use weather_cli::storage::Storage;
+use crate::cli::{prelude::*, Cli, Command};
+use crate::data::{Provider, Weather};
+use crate::storage::Storage;
+
+mod api;
+mod cli;
+mod data;
+mod error;
+mod storage;
 
 fn main() -> Result<()> {
     human_panic::setup_panic!();
