@@ -2,8 +2,11 @@
 #![deny(unsafe_code)]
 #![deny(clippy::unwrap_used)]
 
+use std::time::Duration;
+
 use anyhow::Result;
 use dialoguer::{Confirm, Password, Select};
+use indicatif::ProgressBar;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::si::Unit;
 
@@ -37,7 +40,7 @@ fn main() -> Result<()> {
             let location = choose_location(&mut storage, provider, location)?;
             show_location(location);
 
-            let weather = api_provider.get_weather(&api_key, location)?;
+            let weather = with_spinner(|| api_provider.get_weather(&api_key, location))?;
             show_weather(&weather);
         }
     }
@@ -63,7 +66,7 @@ fn configure_provider(storage: &mut Storage, provider: Provider) -> Result<()> {
         .with_prompt("Input provider API key")
         .interact()?;
 
-    let is_correct_api_key = api_provider.validate_api_key(&api_key)?;
+    let is_correct_api_key = with_spinner(|| api_provider.validate_api_key(&api_key))?;
     if !is_correct_api_key {
         eprintln("Incorrect provider API key.")
     }
@@ -106,7 +109,8 @@ fn choose_location(
         Some(location_str) => {
             let api_provider: Box<dyn api::Provider> = provider.into();
             let api_key = storage.get_api_key(provider);
-            let mut locations = api_provider.search_location(api_key, &location_str)?;
+            let mut locations =
+                with_spinner(|| api_provider.search_location(api_key, &location_str))?;
             let location = match locations.len() {
                 0 => eprintln("Sorry, cannot find any location for the given input."),
                 1 => locations.swap_remove(0),
@@ -146,4 +150,15 @@ fn show_weather(weather: &Weather) {
         degree_celsius::abbreviation()
     );
     println(&format!("Current weather: {}", style.apply_to(weather_str)));
+}
+
+fn with_spinner<F, T>(f: F) -> T
+where
+    F: Fn() -> T,
+{
+    let spinner = ProgressBar::new_spinner();
+    spinner.enable_steady_tick(Duration::from_millis(100));
+    let data = f();
+    spinner.finish_and_clear();
+    data
 }

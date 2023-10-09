@@ -22,6 +22,7 @@ reqwest = { version = "0.11.22", features = ["blocking", "json"] }
 url = "2.4.1"
 proc-exit = "2.0.1"
 uom = "0.35.0"
+indicatif = "0.17.7"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
