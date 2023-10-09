@@ -2,25 +2,22 @@
 #![deny(unsafe_code)]
 #![deny(clippy::unwrap_used)]
 
-use std::time::Duration;
-
 use anyhow::Result;
 use dialoguer::{Confirm, Password, Select};
-use indicatif::ProgressBar;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::si::Unit;
 
 use crate::cli::{prelude::*, Cli, Command};
-use crate::color::{eprintln, get_style_for_weather, println, sprintln, theme};
 use crate::data::{Location, Provider, Weather};
 use crate::storage::Storage;
+use crate::ui::{eprintln, get_style_for_weather, println, sprintln, theme, with_spinner};
 
 mod api;
 mod cli;
-mod color;
 mod data;
 mod error;
 mod storage;
+mod ui;
 
 fn main() -> Result<()> {
     human_panic::setup_panic!();
@@ -150,15 +147,4 @@ fn show_weather(weather: &Weather) {
         degree_celsius::abbreviation()
     );
     println(&format!("Current weather: {}", style.apply_to(weather_str)));
-}
-
-fn with_spinner<F, T>(f: F) -> T
-where
-    F: Fn() -> T,
-{
-    let spinner = ProgressBar::new_spinner();
-    spinner.enable_steady_tick(Duration::from_millis(100));
-    let data = f();
-    spinner.finish_and_clear();
-    data
 }

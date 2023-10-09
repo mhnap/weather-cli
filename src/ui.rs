@@ -1,8 +1,10 @@
 use std::fmt::Write;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use dialoguer::console::Style;
 use dialoguer::theme::{ColorfulTheme, Theme};
+use indicatif::ProgressBar;
 use proc_exit::Code;
 
 pub fn theme() -> &'static ColorfulTheme {
@@ -49,4 +51,15 @@ pub fn get_style_for_weather(description: &str) -> Style {
         s if s.contains("snow") => style.color256(15),
         _ => style,
     }
+}
+
+pub fn with_spinner<F, T>(f: F) -> T
+where
+    F: Fn() -> T,
+{
+    let spinner = ProgressBar::new_spinner();
+    spinner.enable_steady_tick(Duration::from_millis(100));
+    let data = f();
+    spinner.finish_and_clear();
+    data
 }
