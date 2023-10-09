@@ -170,7 +170,7 @@ mod not_windows_tests {
         cmd.args(["configure", first_provider.0]);
 
         let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Input provider API key:")?;
+        p.exp_string("Input provider API key")?;
         p.send_line(first_provider.1)?;
         p.exp_string("Successfully saved provider configuration.")?;
         p.exp_eof()?;
@@ -198,7 +198,7 @@ mod not_windows_tests {
         p.exp_string("Provider is already configured.")?;
         p.exp_string("Do you want to reconfigure?")?;
         p.send_line("y")?;
-        p.exp_string("Input provider API key:")?;
+        p.exp_string("Input provider API key")?;
         p.send_line(first_provider.1)?;
         p.exp_string("Successfully saved provider configuration.")?;
         p.exp_eof()?;
@@ -210,7 +210,7 @@ mod not_windows_tests {
         cmd.args(["configure", second_provider.0]);
 
         let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Input provider API key:")?;
+        p.exp_string("Input provider API key")?;
         p.send_line(second_provider.1)?;
         p.exp_string("Successfully saved provider configuration.")?;
         p.exp_eof()?;
@@ -228,7 +228,7 @@ mod not_windows_tests {
             cmd.args(["configure", provider]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-            p.exp_string("Input provider API key:")?;
+            p.exp_string("Input provider API key")?;
             p.send_line(&key)?;
             p.exp_string("Successfully saved provider configuration.")?;
             p.exp_eof()?;
@@ -261,7 +261,7 @@ mod not_windows_tests {
             cmd.args(["get", "London"]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-            p.exp_string("Several locations have been found, select one of them:")?;
+            p.exp_string("Several locations have been found, select one of them")?;
             p.send_line(" ")?;
             p.exp_string("London")?;
             p.exp_string("°C")?;
@@ -281,7 +281,7 @@ mod not_windows_tests {
             cmd.args(["configure", provider]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-            p.exp_string("Input provider API key:")?;
+            p.exp_string("Input provider API key")?;
             p.send_line("wrong key")?;
             p.exp_string("Incorrect provider API key.")?;
             p.exp_eof()?;
@@ -304,7 +304,7 @@ mod not_windows_tests {
         cmd.args(["configure", first_provider.0]);
 
         let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Input provider API key:")?;
+        p.exp_string("Input provider API key")?;
         p.send_line(first_provider.1)?;
         p.exp_string("Successfully saved provider configuration.")?;
         p.exp_eof()?;
@@ -351,7 +351,7 @@ mod not_windows_tests {
         cmd.args(["configure", second_provider.0]);
 
         let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Input provider API key:")?;
+        p.exp_string("Input provider API key")?;
         p.send_line(second_provider.1)?;
         p.exp_string("Successfully saved provider configuration.")?;
         p.exp_eof()?;
@@ -372,7 +372,7 @@ mod not_windows_tests {
         cmd.args(["get", "London"]);
 
         let mut p = spawn_command(cmd, TIMEOUT_MS)?;
-        p.exp_string("Several locations have been found, select one of them:")?;
+        p.exp_string("Several locations have been found, select one of them")?;
         p.send_line(" ")?;
         p.exp_string("London")?;
         p.exp_string("°C")?;

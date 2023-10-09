@@ -4,16 +4,17 @@
 
 use anyhow::Result;
 use dialoguer::{Confirm, Password, Select};
-use proc_exit::Code;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::si::Unit;
 
 use crate::cli::{prelude::*, Cli, Command};
+use crate::color::{eprintln, get_style_for_weather, println, sprintln, theme};
 use crate::data::{Location, Provider, Weather};
 use crate::storage::Storage;
 
 mod api;
 mod cli;
+mod color;
 mod data;
 mod error;
 mod storage;
@@ -47,29 +48,28 @@ fn main() -> Result<()> {
 
 fn configure_provider(storage: &mut Storage, provider: Provider) -> Result<()> {
     if storage.is_provider_configured(provider) {
-        println!("Provider is already configured.");
-        let confirmation = Confirm::new()
+        println("Provider is already configured.");
+        let confirmation = Confirm::with_theme(theme())
             .with_prompt("Do you want to reconfigure?")
             .interact()?;
         if !confirmation {
-            println!("Provider configuration has not changed.");
+            println("Provider configuration has not changed.");
             return Ok(());
         }
     }
 
     let api_provider: Box<dyn api::Provider> = provider.into();
-    let api_key: String = Password::new()
+    let api_key: String = Password::with_theme(theme())
         .with_prompt("Input provider API key")
         .interact()?;
 
     let is_correct_api_key = api_provider.validate_api_key(&api_key)?;
     if !is_correct_api_key {
-        eprintln!("Incorrect provider API key.");
-        Code::FAILURE.process_exit()
+        eprintln("Incorrect provider API key.")
     }
 
     storage.configure_provider(provider, api_key);
-    println!("Successfully saved provider configuration.");
+    sprintln("Successfully saved provider configuration.");
 
     Ok(())
 }
@@ -78,8 +78,7 @@ fn choose_active_provider(storage: &mut Storage, provider: Option<Provider>) -> 
     match provider {
         None => {
             let Some(provider) = storage.get_active_provider() else {
-                eprintln!("None of the providers is configured.");
-                Code::FAILURE.process_exit()
+                eprintln("None of the providers is configured.")
             };
             provider
         }
@@ -88,8 +87,7 @@ fn choose_active_provider(storage: &mut Storage, provider: Option<Provider>) -> 
                 storage.mark_provider_active(provider);
                 provider
             } else {
-                eprintln!("Provider is not configured.");
-                Code::FAILURE.process_exit()
+                eprintln("Provider is not configured.")
             }
         }
     }
@@ -102,10 +100,7 @@ fn choose_location(
 ) -> Result<&Location> {
     let location = match location_str {
         None => match storage.get_saved_location(provider) {
-            None => {
-                eprintln!("No saved location for active provider.");
-                Code::FAILURE.process_exit()
-            }
+            None => eprintln("No saved location for active provider."),
             Some(location) => location,
         },
         Some(location_str) => {
@@ -113,13 +108,10 @@ fn choose_location(
             let api_key = storage.get_api_key(provider);
             let mut locations = api_provider.search_location(api_key, &location_str)?;
             let location = match locations.len() {
-                0 => {
-                    eprintln!("Sorry, cannot find any location for the given input.");
-                    Code::FAILURE.process_exit()
-                }
+                0 => eprintln("Sorry, cannot find any location for the given input."),
                 1 => locations.swap_remove(0),
                 _ => {
-                    let selection = Select::new()
+                    let selection = Select::with_theme(theme())
                         .default(0)
                         .items(&locations)
                         .with_prompt("Several locations have been found, select one of them")
@@ -139,14 +131,19 @@ fn choose_location(
 }
 
 fn show_location(location: &Location) {
-    println!("Chosen location: {location}");
+    println(&format!(
+        "Chosen location: {}",
+        theme().defaults_style.apply_to(location)
+    ));
 }
 
 fn show_weather(weather: &Weather) {
-    println!(
-        "Current weather: {}, {:.0}{}",
+    let style = get_style_for_weather(&weather.description);
+    let weather_str = format!(
+        "{}, {:.0}{}",
         weather.description,
         weather.temperature.get::<degree_celsius>(),
         degree_celsius::abbreviation()
     );
+    println(&format!("Current weather: {}", style.apply_to(weather_str)));
 }
