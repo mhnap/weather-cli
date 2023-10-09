@@ -42,17 +42,23 @@ struct Config {
 #[derive(Debug)]
 pub struct Storage {
     config: Config,
+    changed: bool,
 }
 
 impl Storage {
     pub fn load() -> Result<Self> {
         let config = confy::load(APP_NAME, config_name().as_str())?;
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            changed: false,
+        })
     }
 
     pub fn store(self) -> Result<()> {
-        // TODO: Store config only if not changed.
-        confy::store(APP_NAME, config_name().as_str(), self.config)?;
+        // Store config only if changed.
+        if self.changed {
+            confy::store(APP_NAME, config_name().as_str(), self.config)?;
+        }
         Ok(())
     }
 
@@ -73,12 +79,14 @@ impl Storage {
             debug!("configured \"{kind:?}\" provider");
         }
         self.mark_provider_active(kind);
+        self.changed = true;
     }
 
     pub fn mark_provider_active(&mut self, kind: Provider) {
         if self.config.active_provider != Some(kind) {
             self.config.active_provider = Some(kind);
             debug!("marked \"{kind:?}\" provider active");
+            self.changed = true;
         }
     }
 
@@ -103,6 +111,7 @@ impl Storage {
             .expect("provider should be configured")
             .saved_location = Some(location);
         debug!("saved location for \"{kind:?}\" provider");
+        self.changed = true;
     }
 
     pub fn get_saved_location(&self, kind: Provider) -> Option<&Location> {
