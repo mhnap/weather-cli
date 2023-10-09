@@ -9,23 +9,23 @@ repository = "https://github.com/mhnap/weather-cli"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.3.19", features = ["derive"] }
-human-panic = "1.1.5"
+clap = { version = "4.4.6", features = ["derive"] }
+human-panic = "1.2.1"
 env_logger = "0.10.0"
-serde = { version = "1.0.176", features = ["derive"] }
+serde = { version = "1.0.188", features = ["derive"] }
 confy = "0.5.1"
-log = "0.4.19"
-dialoguer = "0.10.4"
-anyhow = "1.0.72"
-thiserror = "1.0.44"
-reqwest = { version = "0.11.18", features = ["blocking", "json"] }
-url = "2.4.0"
+log = "0.4.20"
+dialoguer = "0.11.0"
+anyhow = "1.0.75"
+thiserror = "1.0.49"
+reqwest = { version = "0.11.22", features = ["blocking", "json"] }
+url = "2.4.1"
 proc-exit = "2.0.1"
 uom = "0.35.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
-predicates = "3.0.3"
+predicates = "3.0.4"
 rand = "0.8.5"
 
 [target.'cfg(not(windows))'.dev-dependencies]
