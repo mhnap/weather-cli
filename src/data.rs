@@ -40,7 +40,7 @@ pub struct Location {
 
 impl Display for Location {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(state) = self.state.as_ref() {
+        if let Some(state) = self.state.as_ref().filter(|s| !s.is_empty()) {
             write!(f, "{}, {}, {}", self.name, state, self.country)
         } else {
             write!(f, "{}, {}", self.name, self.country)
