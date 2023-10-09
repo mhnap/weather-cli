@@ -28,6 +28,7 @@ pub struct Weather {
     pub description: String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Location {
     pub id: Option<String>,
     pub name: String,

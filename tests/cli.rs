@@ -45,9 +45,8 @@ fn configure_command_help_flag() -> Result<()> {
         .args(["configure", "-h"])
         .assert()
         .success()
-        .stdout(contains(
-            "possible values: open-weather, weather-api, accu-weather",
-        ));
+        .stdout(contains("Configure credentials for the provider"))
+        .stdout(contains("<PROVIDER>  Specific weather API provider [possible values: open-weather, weather-api, accu-weather]"));
 
     Ok(())
 }
@@ -66,7 +65,7 @@ fn configure_command_wrong_provider() -> Result<()> {
 #[test]
 fn configure_command_no_provider() -> Result<()> {
     Command::cargo_bin(BIN_NAME)?
-        .args(["configure"])
+        .arg("configure")
         .assert()
         .failure()
         .stderr(contains(
@@ -82,8 +81,9 @@ fn get_command_help_flag() -> Result<()> {
         .args(["get", "-h"])
         .assert()
         .success()
-        .stdout(contains("-p, --provider <PROVIDER>"))
-        .stdout(contains("<LOCATION>"));
+        .stdout(contains("Show weather by location"))
+        .stdout(contains("[LOCATION]  Choose a location (city, town, or village) and save the choice per provider"))
+        .stdout(contains("-p, --provider <PROVIDER>  Choose an active provider and save the choice [possible values: open-weather, weather-api, accu-weather]"));
 
     Ok(())
 }
@@ -102,28 +102,22 @@ fn get_command_wrong_provider() -> Result<()> {
 }
 
 #[test]
-fn get_command_no_location() -> Result<()> {
-    Command::cargo_bin(BIN_NAME)?
-        .args(["get"])
-        .assert()
-        .failure()
-        .stderr(contains(
-            "the following required arguments were not provided:\n  <LOCATION>",
-        ));
-
-    Ok(())
-}
-
-#[test]
 fn get_command_without_configured_provider() -> Result<()> {
     let config_name = rand_string(8);
+
+    Command::cargo_bin(BIN_NAME)?
+        .env("CONFIG_NAME", &config_name)
+        .arg("get")
+        .assert()
+        .failure()
+        .stderr(contains("None of the providers is configured."));
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
         .args(["get", "Kyiv"])
         .assert()
         .failure()
-        .stderr(contains("There is none configured provider."));
+        .stderr(contains("None of the providers is configured."));
 
     Command::cargo_bin(BIN_NAME)?
         .env("CONFIG_NAME", &config_name)
@@ -156,6 +150,7 @@ mod not_windows_tests {
         Ok([
             ("open-weather", env::var("OPEN_WEATHER_KEY")?),
             ("weather-api", env::var("WEATHER_API_KEY")?),
+            // It's intended that "accu-weather" is third because it has the smallest API limits.
             ("accu-weather", env::var("ACCU_WEATHER_KEY")?),
         ]
         .into())
@@ -255,6 +250,7 @@ mod not_windows_tests {
             cmd.args(["get", "Ternopil"]);
 
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+            p.exp_string("Ternopil")?;
             p.exp_string("°C")?;
             p.exp_eof()?;
 
@@ -267,6 +263,7 @@ mod not_windows_tests {
             let mut p = spawn_command(cmd, TIMEOUT_MS)?;
             p.exp_string("Several locations have been found, select one of them:")?;
             p.send_line(" ")?;
+            p.exp_string("London")?;
             p.exp_string("°C")?;
             p.exp_eof()?;
         }
@@ -289,6 +286,119 @@ mod not_windows_tests {
             p.exp_string("Incorrect provider API key.")?;
             p.exp_eof()?;
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn save_location() -> Result<()> {
+        let config_name = rand_string(8);
+        let providers_with_keys = providers_with_keys()?;
+        let first_provider = providers_with_keys.iter().next().unwrap();
+        let second_provider = providers_with_keys.iter().nth(1).unwrap();
+
+        // Configure provider.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", first_provider.0]);
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Input provider API key:")?;
+        p.send_line(first_provider.1)?;
+        p.exp_string("Successfully saved provider configuration.")?;
+        p.exp_eof()?;
+
+        // Try to get weather for saved location.
+
+        Command::cargo_bin(BIN_NAME)?
+            .env("CONFIG_NAME", &config_name)
+            .arg("get")
+            .assert()
+            .failure()
+            .stderr(contains("No saved location for active provider."));
+
+        // Get weather and save location.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["get", "Ternopil"]);
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Ternopil")?;
+        p.exp_string("°C")?;
+        p.exp_eof()?;
+
+        // Get weather for saved location.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.arg("get");
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Ternopil")?;
+        p.exp_string("°C")?;
+        p.exp_eof()?;
+
+        //
+        // Another provider can save its own location.
+        //
+
+        // Configure provider.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["configure", second_provider.0]);
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Input provider API key:")?;
+        p.send_line(second_provider.1)?;
+        p.exp_string("Successfully saved provider configuration.")?;
+        p.exp_eof()?;
+
+        // Try to get weather for saved location.
+
+        Command::cargo_bin(BIN_NAME)?
+            .env("CONFIG_NAME", &config_name)
+            .arg("get")
+            .assert()
+            .failure()
+            .stderr(contains("No saved location for active provider."));
+
+        // Get weather and save location.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["get", "London"]);
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Several locations have been found, select one of them:")?;
+        p.send_line(" ")?;
+        p.exp_string("London")?;
+        p.exp_string("°C")?;
+        p.exp_eof()?;
+
+        // Get weather for saved location.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.arg("get");
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("London")?;
+        p.exp_string("°C")?;
+        p.exp_eof()?;
+
+        // Saved location of the first provider has not changed.
+
+        let mut cmd = Command::cargo_bin(BIN_NAME)?;
+        cmd.env("CONFIG_NAME", &config_name);
+        cmd.args(["get", "-p", first_provider.0]);
+
+        let mut p = spawn_command(cmd, TIMEOUT_MS)?;
+        p.exp_string("Ternopil")?;
+        p.exp_string("°C")?;
+        p.exp_eof()?;
 
         Ok(())
     }

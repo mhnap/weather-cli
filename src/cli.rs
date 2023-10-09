@@ -22,13 +22,13 @@ pub enum Command {
         #[arg(value_enum)]
         provider: Provider,
     },
-    /// Show weather by address.
+    /// Show weather by location.
     Get {
         /// Choose an active provider and save the choice.
         #[arg(short, long)]
         provider: Option<Provider>,
 
-        /// Choose a location (city, town, or village).
-        location: String,
+        /// Choose a location (city, town, or village) and save the choice per provider.
+        location: Option<String>,
     },
 }

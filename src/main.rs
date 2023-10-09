@@ -9,7 +9,7 @@ use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::si::Unit;
 
 use crate::cli::{prelude::*, Cli, Command};
-use crate::data::{Provider, Weather};
+use crate::data::{Location, Provider, Weather};
 use crate::storage::Storage;
 
 mod api;
@@ -23,22 +23,29 @@ fn main() -> Result<()> {
     env_logger::init();
     let args = Cli::parse();
 
+    let mut storage = Storage::load()?;
     match args.command {
         Command::Configure { provider } => {
-            configure_provider(provider)?;
+            configure_provider(&mut storage, provider)?;
         }
         Command::Get { provider, location } => {
-            let provider = choose_active_provider(provider)?;
-            let weather = get_weather(provider, &location)?;
+            let provider = choose_active_provider(&mut storage, provider);
+            let api_provider: Box<dyn api::Provider> = provider.into();
+            let api_key = storage.get_api_key(provider).to_owned();
+
+            let location = choose_location(&mut storage, provider, location)?;
+            show_location(location);
+
+            let weather = api_provider.get_weather(&api_key, location)?;
             show_weather(&weather);
         }
     }
+    storage.store()?;
 
     Ok(())
 }
 
-fn configure_provider(provider: Provider) -> Result<()> {
-    let storage = Storage::load()?;
+fn configure_provider(storage: &mut Storage, provider: Provider) -> Result<()> {
     if storage.is_provider_configured(provider) {
         println!("Provider is already configured.");
         let confirmation = Confirm::new()
@@ -50,37 +57,36 @@ fn configure_provider(provider: Provider) -> Result<()> {
         }
     }
 
+    let api_provider: Box<dyn api::Provider> = provider.into();
     let api_key: String = Password::new()
         .with_prompt("Input provider API key")
         .interact()?;
 
-    let api_provider: Box<dyn api::Provider> = provider.into();
     let is_correct_api_key = api_provider.validate_api_key(&api_key)?;
     if !is_correct_api_key {
         eprintln!("Incorrect provider API key.");
         Code::FAILURE.process_exit()
     }
 
-    storage.configure_provider(provider, api_key)?;
+    storage.configure_provider(provider, api_key);
     println!("Successfully saved provider configuration.");
 
     Ok(())
 }
 
-fn choose_active_provider(provider: Option<Provider>) -> Result<Provider> {
-    let storage = Storage::load()?;
+fn choose_active_provider(storage: &mut Storage, provider: Option<Provider>) -> Provider {
     match provider {
         None => {
             let Some(provider) = storage.get_active_provider() else {
-                eprintln!("There is none configured provider.");
+                eprintln!("None of the providers is configured.");
                 Code::FAILURE.process_exit()
             };
-            Ok(provider)
+            provider
         }
         Some(provider) => {
             if storage.is_provider_configured(provider) {
-                storage.mark_provider_active(provider)?;
-                Ok(provider)
+                storage.mark_provider_active(provider);
+                provider
             } else {
                 eprintln!("Provider is not configured.");
                 Code::FAILURE.process_exit()
@@ -89,37 +95,56 @@ fn choose_active_provider(provider: Option<Provider>) -> Result<Provider> {
     }
 }
 
-fn get_weather(provider: Provider, location: &str) -> Result<Weather> {
-    let storage = Storage::load()?;
-    let api_key = storage
-        .get_api_key(provider)
-        .expect("active provider should be configured");
-
-    let api_provider: Box<dyn api::Provider> = provider.into();
-    let locations = api_provider.search_location(api_key, location)?;
-    let location = match locations.len() {
-        0 => {
-            eprintln!("Sorry, cannot find any location for the given input.");
-            Code::FAILURE.process_exit()
-        }
-        1 => &locations[0],
-        _ => {
-            let selection = Select::new()
-                .default(0)
-                .items(&locations)
-                .with_prompt("Several locations have been found, select one of them")
-                .interact()?;
-            &locations[selection]
+fn choose_location(
+    storage: &mut Storage,
+    provider: Provider,
+    location_str: Option<String>,
+) -> Result<&Location> {
+    let location = match location_str {
+        None => match storage.get_saved_location(provider) {
+            None => {
+                eprintln!("No saved location for active provider.");
+                Code::FAILURE.process_exit()
+            }
+            Some(location) => location,
+        },
+        Some(location_str) => {
+            let api_provider: Box<dyn api::Provider> = provider.into();
+            let api_key = storage.get_api_key(provider);
+            let mut locations = api_provider.search_location(api_key, &location_str)?;
+            let location = match locations.len() {
+                0 => {
+                    eprintln!("Sorry, cannot find any location for the given input.");
+                    Code::FAILURE.process_exit()
+                }
+                1 => locations.swap_remove(0),
+                _ => {
+                    let selection = Select::new()
+                        .default(0)
+                        .items(&locations)
+                        .with_prompt("Several locations have been found, select one of them")
+                        .report(false)
+                        .interact()?;
+                    locations.swap_remove(selection)
+                }
+            };
+            storage.save_location(provider, location);
+            storage
+                .get_saved_location(provider)
+                .expect("location should be saved")
         }
     };
-    let weather = api_provider.get_weather(api_key, location)?;
 
-    Ok(weather)
+    Ok(location)
+}
+
+fn show_location(location: &Location) {
+    println!("Chosen location: {location}");
 }
 
 fn show_weather(weather: &Weather) {
     println!(
-        "{}, {:.0}{}",
+        "Current weather: {}, {:.0}{}",
         weather.description,
         weather.temperature.get::<degree_celsius>(),
         degree_celsius::abbreviation()

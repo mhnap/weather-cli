@@ -3,7 +3,7 @@ use std::env;
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::data::Provider;
+use crate::data::{Location, Provider};
 use crate::error::Result;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,8 +29,10 @@ fn config_name() -> String {
 struct ProviderData {
     kind: Provider,
     api_key: String,
+    saved_location: Option<Location>,
 }
 
+// NOTE: Order of fields does matter.
 #[derive(Deserialize, Serialize, Default, Debug)]
 struct Config {
     active_provider: Option<Provider>,
@@ -45,47 +47,38 @@ pub struct Storage {
 impl Storage {
     pub fn load() -> Result<Self> {
         let config = confy::load(APP_NAME, config_name().as_str())?;
+        Ok(Self { config })
+    }
 
-        Ok(Storage { config })
+    pub fn store(self) -> Result<()> {
+        // TODO: Store config only if not changed.
+        confy::store(APP_NAME, config_name().as_str(), self.config)?;
+        Ok(())
     }
 
     pub fn is_provider_configured(&self, kind: Provider) -> bool {
         self.config.providers.iter().any(|p| p.kind == kind)
     }
 
-    pub fn configure_provider(mut self, kind: Provider, api_key: String) -> Result<()> {
+    pub fn configure_provider(&mut self, kind: Provider, api_key: String) {
         if let Some(provider) = self.config.providers.iter_mut().find(|p| p.kind == kind) {
             provider.api_key = api_key;
             debug!("reconfigured \"{kind:?}\" provider");
         } else {
-            self.config.providers.push(ProviderData { kind, api_key });
+            self.config.providers.push(ProviderData {
+                kind,
+                api_key,
+                saved_location: None,
+            });
             debug!("configured \"{kind:?}\" provider");
         }
-
-        self.mark_provider_active_without_store(kind);
-        confy::store(APP_NAME, config_name().as_str(), self.config)?;
-
-        Ok(())
+        self.mark_provider_active(kind);
     }
 
-    pub fn mark_provider_active(mut self, kind: Provider) -> Result<()> {
-        if self.mark_provider_active_without_store(kind) {
-            confy::store(APP_NAME, config_name().as_str(), self.config)?;
-        }
-
-        Ok(())
-    }
-
-    // Use this function to store config only one time during configuring provider.
-    // Another option is to copy-paste condition, assignment and debug log.
-    fn mark_provider_active_without_store(&mut self, kind: Provider) -> bool {
-        // Check whether provider is already active.
-        if self.config.active_provider == Some(kind) {
-            false
-        } else {
+    pub fn mark_provider_active(&mut self, kind: Provider) {
+        if self.config.active_provider != Some(kind) {
             self.config.active_provider = Some(kind);
             debug!("marked \"{kind:?}\" provider active");
-            true
         }
     }
 
@@ -93,12 +86,32 @@ impl Storage {
         self.config.active_provider
     }
 
-    pub fn get_api_key(&self, kind: Provider) -> Option<&str> {
+    pub fn get_api_key(&self, kind: Provider) -> &str {
         self.config
             .providers
             .iter()
             .find(|p| p.kind == kind)
             .map(|p| p.api_key.as_str())
+            .expect("provider should be configured")
+    }
+
+    pub fn save_location(&mut self, kind: Provider, location: Location) {
+        self.config
+            .providers
+            .iter_mut()
+            .find(|p| p.kind == kind)
+            .expect("provider should be configured")
+            .saved_location = Some(location);
+        debug!("saved location for \"{kind:?}\" provider");
+    }
+
+    pub fn get_saved_location(&self, kind: Provider) -> Option<&Location> {
+        self.config
+            .providers
+            .iter()
+            .find(|p| p.kind == kind)?
+            .saved_location
+            .as_ref()
     }
 }
 
@@ -107,7 +120,6 @@ mod tests {
     use rand::distributions::{Alphanumeric, DistString};
 
     use crate::data::Provider::{OpenWeather, WeatherApi};
-    use crate::error::Result;
 
     use super::*;
 
@@ -117,61 +129,120 @@ mod tests {
 
     // Currently, can run only one test, as it sets env var and other tests cannot be run in parallel.
     #[test]
-    fn configure_provider() -> Result<()> {
+    fn configure_provider() {
         env::set_var("CONFIG_NAME", rand_string(8));
-        let storage = Storage::load()?;
+        let mut storage = Storage::load().unwrap();
 
         assert!(storage.config.active_provider.is_none());
         assert!(storage.config.providers.is_empty());
         assert!(!storage.is_provider_configured(OpenWeather));
-        assert!(storage.get_api_key(OpenWeather).is_none());
 
         // Configure provider first time.
 
-        storage.configure_provider(OpenWeather, "api_key".into())?;
-        let storage = Storage::load()?;
+        storage.configure_provider(OpenWeather, "api_key".into());
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured(OpenWeather));
         assert_eq!(storage.config.active_provider, Some(OpenWeather));
         assert_eq!(storage.get_active_provider(), Some(OpenWeather));
+
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "api_key");
-        assert_eq!(storage.get_api_key(OpenWeather), Some("api_key"));
+        assert_eq!(storage.get_api_key(OpenWeather), "api_key");
+
+        // Save location for first provider.
+
+        storage.save_location(
+            OpenWeather,
+            Location {
+                id: None,
+                name: "first_location".to_string(),
+                state: None,
+                country: String::new(),
+                lat: None,
+                lon: None,
+            },
+        );
+        assert_eq!(
+            storage.get_saved_location(OpenWeather).unwrap().name,
+            "first_location"
+        );
 
         // Reconfigure provider.
 
-        storage.configure_provider(OpenWeather, "new_api_key".into())?;
-        let storage = Storage::load()?;
+        storage.configure_provider(OpenWeather, "new_api_key".into());
         assert_eq!(storage.config.providers.len(), 1);
         assert!(storage.is_provider_configured(OpenWeather));
         assert_eq!(storage.config.active_provider, Some(OpenWeather));
         assert_eq!(storage.get_active_provider(), Some(OpenWeather));
+
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, OpenWeather);
         assert_eq!(provider.api_key, "new_api_key");
-        assert_eq!(storage.get_api_key(OpenWeather), Some("new_api_key"));
+        assert_eq!(storage.get_api_key(OpenWeather), "new_api_key");
 
         // Configure another provider.
 
-        storage.configure_provider(WeatherApi, "another_api_key".into())?;
-        let storage = Storage::load()?;
+        storage.configure_provider(WeatherApi, "another_api_key".into());
         assert_eq!(storage.config.providers.len(), 2);
         assert!(storage.is_provider_configured(WeatherApi));
         assert_eq!(storage.config.active_provider, Some(WeatherApi));
         assert_eq!(storage.get_active_provider(), Some(WeatherApi));
+
         let provider = storage.config.providers.last().unwrap();
         assert_eq!(provider.kind, WeatherApi);
         assert_eq!(provider.api_key, "another_api_key");
-        assert_eq!(storage.get_api_key(WeatherApi), Some("another_api_key"));
+        assert_eq!(storage.get_api_key(WeatherApi), "another_api_key");
+
+        // Save location for second provider.
+
+        storage.save_location(
+            WeatherApi,
+            Location {
+                id: None,
+                name: "second_location".to_string(),
+                state: None,
+                country: String::new(),
+                lat: None,
+                lon: None,
+            },
+        );
+        assert_eq!(
+            storage.get_saved_location(WeatherApi).unwrap().name,
+            "second_location"
+        );
 
         // Mark provider as active.
 
-        storage.mark_provider_active(OpenWeather)?;
-        let storage = Storage::load()?;
+        storage.mark_provider_active(OpenWeather);
         assert_eq!(storage.get_active_provider(), Some(OpenWeather));
         assert_eq!(storage.config.active_provider, Some(OpenWeather));
 
-        Ok(())
+        // Store and reload.
+
+        storage.store().unwrap();
+        let storage = Storage::load().unwrap();
+
+        let provider = storage.config.providers.first().unwrap();
+        assert_eq!(provider.kind, OpenWeather);
+        assert_eq!(provider.api_key, "new_api_key");
+        assert_eq!(storage.get_api_key(OpenWeather), "new_api_key");
+
+        let provider = storage.config.providers.last().unwrap();
+        assert_eq!(provider.kind, WeatherApi);
+        assert_eq!(provider.api_key, "another_api_key");
+        assert_eq!(storage.get_api_key(WeatherApi), "another_api_key");
+
+        assert_eq!(storage.get_active_provider(), Some(OpenWeather));
+        assert_eq!(storage.config.active_provider, Some(OpenWeather));
+
+        assert_eq!(
+            storage.get_saved_location(OpenWeather).unwrap().name,
+            "first_location"
+        );
+        assert_eq!(
+            storage.get_saved_location(WeatherApi).unwrap().name,
+            "second_location"
+        );
     }
 }
