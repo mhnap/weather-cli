@@ -31,13 +31,14 @@ fn main() -> Result<()> {
         }
         Command::Get { provider, location } => {
             let provider = choose_active_provider(&mut storage, provider);
-            let api_provider: Box<dyn api::Provider> = provider.into();
-            let api_key = storage.get_api_key(provider).to_owned();
 
-            let location = choose_location(&mut storage, provider, location)?;
+            let api_key = storage.get_api_key(provider).to_owned();
+            let api = api::new(provider, api_key);
+
+            let location = choose_location(&mut storage, api.as_ref(), location)?;
             show_location(location);
 
-            let weather = with_spinner(|| api_provider.get_weather(&api_key, location))?;
+            let weather = with_spinner(|| api.get_weather(location))?;
             show_weather(&weather);
         }
     }
@@ -58,12 +59,12 @@ fn configure_provider(storage: &mut Storage, provider: Provider) -> Result<()> {
         }
     }
 
-    let api_provider: Box<dyn api::Provider> = provider.into();
     let api_key: String = Password::with_theme(theme())
         .with_prompt("Input provider API key")
         .interact()?;
+    let api = api::new(provider, api_key.clone());
 
-    let is_correct_api_key = with_spinner(|| api_provider.validate_api_key(&api_key))?;
+    let is_correct_api_key = with_spinner(|| api.is_valid())?;
     if !is_correct_api_key {
         eprintln("Incorrect provider API key.")
     }
@@ -93,21 +94,19 @@ fn choose_active_provider(storage: &mut Storage, provider: Option<Provider>) -> 
     }
 }
 
-fn choose_location(
-    storage: &mut Storage,
-    provider: Provider,
+fn choose_location<'a>(
+    storage: &'a mut Storage,
+    api: &dyn api::Api,
     location_str: Option<String>,
-) -> Result<&Location> {
+) -> Result<&'a Location> {
+    let provider = api.provider();
     let location = match location_str {
         None => match storage.get_saved_location(provider) {
             None => eprintln("No saved location for active provider."),
             Some(location) => location,
         },
         Some(location_str) => {
-            let api_provider: Box<dyn api::Provider> = provider.into();
-            let api_key = storage.get_api_key(provider);
-            let mut locations =
-                with_spinner(|| api_provider.search_location(api_key, &location_str))?;
+            let mut locations = with_spinner(|| api.search_location(&location_str))?;
             let location = match locations.len() {
                 0 => eprintln("Sorry, cannot find any location for the given input."),
                 1 => locations.swap_remove(0),

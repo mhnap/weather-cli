@@ -5,33 +5,45 @@ use serde::Deserialize;
 use uom::si::f64::ThermodynamicTemperature;
 use uom::si::thermodynamic_temperature::kelvin;
 
-use crate::data;
+use crate::data::{self, Provider};
 use crate::error::{Error, Result};
 
-use super::{construct_url, Provider};
+use super::{construct_url, Api};
 
-pub struct OpenWeather;
+pub struct OpenWeather {
+    api_key: String,
+}
 
-impl Provider for OpenWeather {
-    fn test_call(&self, api_key: &str, q: &str) -> reqwest::Result<()> {
-        geo_direct(api_key, q, true)?;
+impl OpenWeather {
+    pub fn new(api_key: String) -> Self {
+        Self { api_key }
+    }
+}
+
+impl Api for OpenWeather {
+    fn test_call(&self, q: &str) -> reqwest::Result<()> {
+        geo_direct(&self.api_key, q, true)?;
         Ok(())
     }
 
-    fn search_location(&self, api_key: &str, location: &str) -> Result<Vec<data::Location>> {
-        let response = geo_direct(api_key, location, false)?;
+    fn search_location(&self, location: &str) -> Result<Vec<data::Location>> {
+        let response = geo_direct(&self.api_key, location, false)?;
         let locations: Vec<Location> = response.json()?;
         Ok(locations.into_iter().map(Into::into).collect())
     }
 
-    fn get_weather(&self, api_key: &str, location: &data::Location) -> Result<data::Weather> {
+    fn get_weather(&self, location: &data::Location) -> Result<data::Weather> {
         let response = data_weather(
-            api_key,
+            &self.api_key,
             location.lat.expect("lat should be set"),
             location.lon.expect("lon should be set"),
         )?;
         let weather: Weather = response.json()?;
         weather.try_into()
+    }
+
+    fn provider(&self) -> Provider {
+        Provider::OpenWeather
     }
 }
 
