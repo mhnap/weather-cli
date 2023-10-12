@@ -1,9 +1,8 @@
-use std::fmt::Write;
 use std::sync::OnceLock;
 use std::time::Duration;
 
 use dialoguer::console::Style;
-use dialoguer::theme::{ColorfulTheme, Theme};
+use dialoguer::theme::ColorfulTheme;
 use indicatif::ProgressBar;
 use proc_exit::Code;
 
@@ -19,24 +18,20 @@ pub fn println(msg: &str) {
 
 // Success style println.
 pub fn sprintln(msg: &str) {
-    let mut buf = String::new();
-    write!(
-        &mut buf,
+    println!(
         "{} {}",
         theme().success_prefix,
         theme().prompt_style.apply_to(msg)
-    )
-    .expect("format should be valid");
-    println!("{buf}");
+    );
 }
 
 // Error style println and exit.
 pub fn eprintln(msg: &str) -> ! {
-    let mut buf = String::new();
-    theme()
-        .format_error(&mut buf, msg)
-        .expect("format should be valid");
-    eprintln!("{buf}");
+    eprintln!(
+        "{} {}",
+        theme().error_prefix,
+        theme().error_style.apply_to(msg)
+    );
     Code::FAILURE.process_exit()
 }
 
