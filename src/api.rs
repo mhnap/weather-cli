@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use url::Url;
 
 pub use accu_weather::AccuWeather;
@@ -35,19 +33,12 @@ pub trait Api {
     fn provider(&self) -> Provider;
 }
 
-fn construct_url(host: &str, path_segments: Vec<&str>, query_pairs: HashMap<&str, &str>) -> Url {
+fn construct_url(host: &str, path_segments: &[&str], query_pairs: &[(&str, &str)]) -> Url {
     let mut url = Url::parse(host).expect("static urls should be valid");
-
-    for path_segment in path_segments {
-        url.path_segments_mut()
-            .expect("static urls should be valid")
-            .push(path_segment);
-    }
-
-    for (key, value) in query_pairs {
-        url.query_pairs_mut().append_pair(key, value);
-    }
-
+    url.path_segments_mut()
+        .expect("static urls should be valid")
+        .extend(path_segments);
+    url.query_pairs_mut().extend_pairs(query_pairs);
     url
 }
 

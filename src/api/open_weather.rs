@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use reqwest::blocking::{get, Response};
 use serde::Deserialize;
 use uom::si::f64::ThermodynamicTemperature;
@@ -74,12 +72,12 @@ impl From<Location> for data::Location {
 fn geo_direct(api_key: &str, q: &str, limit: bool) -> reqwest::Result<Response> {
     let url = construct_url(
         HOST,
-        vec!["geo", "1.0", "direct"],
-        HashMap::from([
+        &["geo", "1.0", "direct"],
+        &[
             ("appid", api_key),
             ("q", q),
             ("limit", if limit { "1" } else { "0" }),
-        ]),
+        ],
     );
 
     get(url)?.error_for_status()
@@ -115,12 +113,12 @@ impl TryFrom<Weather> for data::Weather {
 fn data_weather(api_key: &str, lat: f64, lon: f64) -> reqwest::Result<Response> {
     let url = construct_url(
         HOST,
-        vec!["data", "2.5", "weather"],
-        HashMap::from([
+        &["data", "2.5", "weather"],
+        &[
             ("appid", api_key),
             ("lat", &lat.to_string()),
             ("lon", &lon.to_string()),
-        ]),
+        ],
     );
 
     get(url)?.error_for_status()
