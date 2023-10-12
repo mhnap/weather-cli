@@ -1,4 +1,4 @@
-use std::env;
+use std::path::Path;
 
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -8,22 +8,6 @@ use crate::error::Result;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const DEFAULT_CONFIG_NAME: &str = "config";
-
-// Read config name from env in debug mode, needed for testing.
-#[cfg(debug_assertions)]
-fn config_name() -> String {
-    if let Ok(config_name) = env::var("CONFIG_NAME") {
-        config_name
-    } else {
-        DEFAULT_CONFIG_NAME.into()
-    }
-}
-
-// Do not read config name from env in release mode.
-#[cfg(not(debug_assertions))]
-fn config_name() -> String {
-    DEFAULT_CONFIG_NAME.into()
-}
 
 #[derive(Deserialize, Serialize, Debug)]
 struct ProviderData {
@@ -46,18 +30,24 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn load() -> Result<Self> {
-        let config = confy::load(APP_NAME, config_name().as_str())?;
+    pub fn load(path: Option<impl AsRef<Path>>) -> Result<Self> {
+        let config = match path {
+            None => confy::load(APP_NAME, DEFAULT_CONFIG_NAME),
+            Some(path) => confy::load_path(path),
+        }?;
         Ok(Self {
             config,
             changed: false,
         })
     }
 
-    pub fn store(self) -> Result<()> {
+    pub fn store(self, path: Option<impl AsRef<Path>>) -> Result<()> {
         // Store config only if changed.
         if self.changed {
-            confy::store(APP_NAME, config_name().as_str(), self.config)?;
+            match path {
+                None => confy::store(APP_NAME, DEFAULT_CONFIG_NAME, self.config),
+                Some(path) => confy::store_path(path, self.config),
+            }?;
         }
         Ok(())
     }
@@ -126,21 +116,17 @@ impl Storage {
 
 #[cfg(test)]
 mod tests {
-    use rand::distributions::{Alphanumeric, DistString};
+    use assert_fs::NamedTempFile;
 
     use crate::data::Provider::{OpenWeather, WeatherApi};
 
     use super::*;
 
-    fn rand_string(len: usize) -> String {
-        Alphanumeric.sample_string(&mut rand::thread_rng(), len)
-    }
-
-    // Currently, can run only one test, as it sets env var and other tests cannot be run in parallel.
     #[test]
     fn configure_provider() {
-        env::set_var("CONFIG_NAME", rand_string(8));
-        let mut storage = Storage::load().unwrap();
+        let config = NamedTempFile::new("config").unwrap();
+        let path = Some(config.path());
+        let mut storage = Storage::load(path).unwrap();
 
         assert!(storage.config.active_provider.is_none());
         assert!(storage.config.providers.is_empty());
@@ -229,8 +215,8 @@ mod tests {
 
         // Store and reload.
 
-        storage.store().unwrap();
-        let storage = Storage::load().unwrap();
+        storage.store(path).unwrap();
+        let storage = Storage::load(path).unwrap();
 
         let provider = storage.config.providers.first().unwrap();
         assert_eq!(provider.kind, OpenWeather);

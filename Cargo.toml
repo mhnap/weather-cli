@@ -26,8 +26,8 @@ indicatif = "0.17.7"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
+assert_fs = "1.0.13"
 predicates = "3.0.4"
-rand = "0.8.5"
 
 [target.'cfg(not(windows))'.dev-dependencies]
 rexpect = "0.5.0"

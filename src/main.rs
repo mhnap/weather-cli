@@ -24,12 +24,18 @@ fn main() -> Result<()> {
     env_logger::init();
     let args = Cli::parse();
 
-    let mut storage = Storage::load()?;
     match args.command {
-        Command::Configure { provider } => {
+        Command::Configure { provider, config } => {
+            let mut storage = Storage::load(config.as_ref())?;
             configure_provider(&mut storage, provider)?;
+            storage.store(config)?;
         }
-        Command::Get { provider, location } => {
+        Command::Get {
+            provider,
+            location,
+            config,
+        } => {
+            let mut storage = Storage::load(config.as_ref())?;
             let provider = choose_active_provider(&mut storage, provider);
 
             let api_key = storage.get_api_key(provider).to_owned();
@@ -40,9 +46,9 @@ fn main() -> Result<()> {
 
             let weather = with_spinner(|| api.get_weather(location))?;
             show_weather(&weather);
+            storage.store(config)?;
         }
     }
-    storage.store()?;
 
     Ok(())
 }
