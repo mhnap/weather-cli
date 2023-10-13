@@ -70,7 +70,8 @@ impl From<Location> for data::Location {
 }
 
 fn search(api_key: &str, q: &str) -> reqwest::Result<Response> {
-    let url = construct_url(HOST, &["v1", "search.json"], &[("key", api_key), ("q", q)]);
+    let url = construct_url(HOST, &["v1", "search.json"], &[("key", api_key), ("q", q)])
+        .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }
@@ -105,7 +106,8 @@ fn current(api_key: &str, lat: f64, lon: f64) -> reqwest::Result<Response> {
         HOST,
         &["v1", "current.json"],
         &[("key", api_key), ("q", &format!("{lat},{lon}"))],
-    );
+    )
+    .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }

@@ -89,7 +89,8 @@ fn locations_cities_search(api_key: &str, q: &str) -> reqwest::Result<Response> 
         HOST,
         &["locations", "v1", "cities", "search"],
         &[("apikey", api_key), ("q", q)],
-    );
+    )
+    .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }
@@ -129,7 +130,8 @@ fn current_conditions(api_key: &str, location_key: &str) -> reqwest::Result<Resp
         HOST,
         &["currentconditions", "v1", location_key],
         &[("apikey", api_key)],
-    );
+    )
+    .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }

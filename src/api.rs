@@ -1,4 +1,4 @@
-use url::Url;
+use url::{ParseError, Url};
 
 pub use accu_weather::AccuWeather;
 pub use open_weather::OpenWeather;
@@ -33,13 +33,17 @@ pub trait Api {
     fn provider(&self) -> Provider;
 }
 
-fn construct_url(host: &str, path_segments: &[&str], query_pairs: &[(&str, &str)]) -> Url {
-    let mut url = Url::parse(host).expect("static urls should be valid");
+fn construct_url(
+    host: &str,
+    path_segments: &[&str],
+    query_pairs: &[(&str, &str)],
+) -> Result<Url, ParseError> {
+    let mut url = Url::parse(host)?;
     url.path_segments_mut()
-        .expect("static urls should be valid")
+        .map_err(|_| ParseError::RelativeUrlWithCannotBeABaseBase)?
         .extend(path_segments);
     url.query_pairs_mut().extend_pairs(query_pairs);
-    url
+    Ok(url)
 }
 
 pub fn new(provider: Provider, api_key: String) -> Box<dyn Api> {

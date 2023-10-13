@@ -78,7 +78,8 @@ fn geo_direct(api_key: &str, q: &str, limit: bool) -> reqwest::Result<Response> 
             ("q", q),
             ("limit", if limit { "1" } else { "0" }),
         ],
-    );
+    )
+    .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }
@@ -119,7 +120,8 @@ fn data_weather(api_key: &str, lat: f64, lon: f64) -> reqwest::Result<Response> 
             ("lat", &lat.to_string()),
             ("lon", &lon.to_string()),
         ],
-    );
+    )
+    .expect("static url should be valid");
 
     get(url)?.error_for_status()
 }
