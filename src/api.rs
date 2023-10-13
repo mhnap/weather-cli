@@ -1,3 +1,4 @@
+use reqwest::blocking::Response;
 use url::{ParseError, Url};
 
 pub use accu_weather::AccuWeather;
@@ -12,19 +13,7 @@ mod open_weather;
 mod weather_api;
 
 pub trait Api {
-    fn is_valid(&self) -> Result<bool> {
-        let result = self.test_call("Kyiv");
-        if let Some(status_code) = result.as_ref().err().and_then(|e| e.status()) {
-            if status_code == 401 || status_code == 403 {
-                return Ok(false);
-            }
-        }
-        result?;
-
-        Ok(true)
-    }
-
-    fn test_call(&self, q: &str) -> reqwest::Result<()>;
+    fn is_valid(&self) -> Result<bool>;
 
     fn search_location(&self, q: &str) -> Result<Vec<Location>>;
 
@@ -44,6 +33,16 @@ fn construct_url(
         .extend(path_segments);
     url.query_pairs_mut().extend_pairs(query_pairs);
     Ok(url)
+}
+
+fn has_status_code(result: reqwest::Result<Response>, code: u16) -> Result<bool> {
+    if let Some(status_code) = result.as_ref().err().and_then(|e| e.status()) {
+        if status_code == code {
+            return Ok(false);
+        }
+    }
+    result?;
+    Ok(true)
 }
 
 pub fn new(provider: Provider, api_key: String) -> Box<dyn Api> {
