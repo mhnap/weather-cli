@@ -1,0 +1,33 @@
+[package]
+name = "weather-cli"
+version = "0.1.0"
+authors = ["Mykhailo Hnap <mike.gnap.r@gmail.com>"]
+edition = "2021"
+homepage = "https://github.com/mhnap/weather-cli"
+repository = "https://github.com/mhnap/weather-cli"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.4.6", features = ["derive"] }
+human-panic = "1.2.1"
+env_logger = "0.10.0"
+serde = { version = "1.0.188", features = ["derive"] }
+confy = "0.5.1"
+log = "0.4.20"
+dialoguer = "0.11.0"
+anyhow = "1.0.75"
+thiserror = "1.0.49"
+reqwest = { version = "0.11.22", features = ["blocking", "json"] }
+url = "2.4.1"
+proc-exit = "2.0.1"
+uom = "0.35.0"
+indicatif = "0.17.7"
+
+[dev-dependencies]
+assert_cmd = "2.0.12"
+assert_fs = "1.0.13"
+predicates = "3.0.4"
+
+[target.'cfg(not(windows))'.dev-dependencies]
+rexpect = "0.5.0"
