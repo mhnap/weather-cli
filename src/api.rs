@@ -35,9 +35,9 @@ fn construct_url(
     Ok(url)
 }
 
-fn has_status_code(result: reqwest::Result<Response>, code: u16) -> Result<bool> {
+fn has_valid_status_code(result: reqwest::Result<Response>, invalid_code: u16) -> Result<bool> {
     if let Some(status_code) = result.as_ref().err().and_then(|e| e.status()) {
-        if status_code == code {
+        if status_code == invalid_code {
             return Ok(false);
         }
     }

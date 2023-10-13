@@ -6,7 +6,7 @@ use uom::si::thermodynamic_temperature::degree_celsius;
 use crate::data::{self, Provider};
 use crate::error::Result;
 
-use super::{construct_url, has_status_code, Api};
+use super::{construct_url, has_valid_status_code, Api};
 
 pub struct WeatherApi {
     api_key: String,
@@ -20,7 +20,7 @@ impl WeatherApi {
 
 impl Api for WeatherApi {
     fn is_valid(&self) -> Result<bool> {
-        has_status_code(search(&self.api_key, "Kyiv"), 403)
+        has_valid_status_code(search(&self.api_key, "Kyiv"), 403)
     }
 
     fn search_location(&self, location: &str) -> Result<Vec<data::Location>> {
